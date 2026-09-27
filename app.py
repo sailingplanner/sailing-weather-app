@@ -63,6 +63,13 @@ mee te houden en zou daarmee een meer realistische vaarafstand en reistijd tonen
 De verdere ontwikkeling van deze pagina hangt sterk af van jouw input. Mocht je suggesties of ideeën
 hebben, lees ik die graag. Je kunt dit doorgeven via een donatie aan de pagina — daar kun je een
 bericht bij achterlaten.
+
+**Over beschikbaarheid en performance**
+Deze app is gratis beschikbaar en draait op een gedeelde omgeving. Bij intensief of gelijktijdig gebruik
+door meerdere bezoekers kan de responstijd oplopen, met name bij de routeberekeningen die veel data opvragen.
+Dit is een bewuste keuze geweest om de drempel laag te houden. Met voldoende terugkerende steun via donaties
+ontstaan er opties om de infrastructuur te upgraden naar een snellere, dedicated omgeving — wat ook
+meer geavanceerde functies mogelijk maakt. Iedere bijdrage helpt daar direct aan mee.
 """,
     "why_text_en": """
 This app was created out of a need to get an advance idea of the best period to visit a specific
@@ -76,6 +83,14 @@ take these into account, providing a more realistic sailing distance and travel 
 
 The further development of this page depends strongly on your input. If you have suggestions or ideas,
 I would love to hear them. You can share these by leaving a message with a donation to the page.
+
+**About availability and performance**
+This app is available free of charge and runs on a shared infrastructure. During periods of heavy or
+simultaneous use, response times may increase — particularly for route calculations that require
+significant data retrieval. This is a deliberate choice to keep the barrier to access as low as possible.
+With sufficient recurring support through donations, there are options to upgrade the infrastructure
+to a faster, dedicated environment — which would also enable more advanced features.
+Every contribution makes a direct difference.
 """,
     "loc_input":       "Locatie / Haven"              if is_nl else "Location / Harbor",
     "country_filter":  "Landfilter"                   if is_nl else "Country Filter",
@@ -791,6 +806,7 @@ def vmg_boat_speed(twa_deg, wind_kt, boat_speed_kt):
     return boat_speed_kt * factor * wind_factor
 
 
+@st.cache_data(ttl=3600)
 def route_window_score(la, loa, lb, lob, dep_dt, boat_spd_kt,
                        min_wind=9, max_wind=17, max_gust=20, max_wave=1.5,
                        preferred_dirs=None):
@@ -883,6 +899,7 @@ def route_window_score(la, loa, lb, lob, dep_dt, boat_spd_kt,
     return round((score_sum / total) * 100, 1) if total > 0 else 50.0
 
 
+@st.cache_data
 def build_searoute_corridor(la, loa, lb, lob, via=None, width_nm=35.0):
     """
     Bouwt een set van bevaarbare grid-cellen op basis van de SeaRoute-knooppunten.
@@ -2228,21 +2245,24 @@ favourable heading *within* that corridor based on wind and current.
 
             # Windpijltje elke N waypoints
             if i % ARROW_EVERY == 0:
-                # Windpijl als DivIcon met rotatie
-                wind_arrow_dir = (w_dir + 180) % 360   # pijl wijst waar wind naartoe gaat
+                # Windpijl: ➤ wijst in de richting vanwaar wind komt (meteorologisch)
+                # w_dir = 315° betekent wind uit NW → pijl wijst naar NW (315°)
+                # SVG/CSS 0° = omhoog (N), kloksgewijs → CSS rotate(w_dir)
+                # Correctie: CSS 0°=rechts, SVG 0°=omhoog → offset -90°
+                arrow_css_deg = (w_dir - 90) % 360
                 arrow_html = (
-                    f'<div style="transform:rotate({wind_arrow_dir:.0f}deg);'
-                    f'font-size:16px;color:#1a6db5;opacity:0.85;'
-                    f'text-shadow:0 0 3px white;">➤</div>'
+                    f'<div style="transform:rotate({arrow_css_deg:.0f}deg);'
+                    f'font-size:16px;color:#1a6db5;opacity:0.90;'
+                    f'text-shadow:0 0 3px white,0 0 3px white;">➤</div>'
                 )
                 folium.Marker(
                     location=path_coords[i],
                     icon=folium.DivIcon(
                         html=arrow_html,
-                        icon_size=(20, 20),
-                        icon_anchor=(10, 10),
+                        icon_size=(22, 22),
+                        icon_anchor=(11, 11),
                     ),
-                    tooltip=f"Wind {w_kt:.1f} kt uit {card_wind}",
+                    tooltip=f"WP {i+1} | Wind {w_kt:.1f} kt uit {card_wind}",
                 ).add_to(cmap3)
 
         folium.Marker([la3, loa3], popup=f"Start: {na3}",
