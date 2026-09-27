@@ -2023,8 +2023,8 @@ favourable heading *within* that corridor based on wind and current.
             st.success(t["m3_night_ok"])
 
         # ── 48-uurs veervenster-analyse ───────────────────────────────────────
-        with st.spinner("48-uurs weervensters analyseren..." if is_nl
-                        else "Analysing 48-hour weather windows..."):
+        with st.spinner("72-uurs weervensters analyseren..." if is_nl
+                        else "Analysing 72-hour weather windows..."):
             current_score = route_window_score(
                 la3, loa3, lb3, lob3, dep_dt3, bspd3,
                 min_wind=min_wind_kt, max_wind=max_wind_kt,
@@ -2032,7 +2032,7 @@ favourable heading *within* that corridor based on wind and current.
                 preferred_dirs=preferred_dirs or None
             )
             window_scores = []
-            for h_offset in range(1, 49):
+            for h_offset in range(1, 73):
                 alt_dep = dep_dt3 + timedelta(hours=h_offset)
                 score   = route_window_score(
                     la3, loa3, lb3, lob3, alt_dep, bspd3,
@@ -2048,8 +2048,8 @@ favourable heading *within* that corridor based on wind and current.
         THRESHOLD = 15.0
 
         st.markdown("---")
-        st.markdown("### 🕐 " + ("Beste weervenster binnen 48 uur"
-                                  if is_nl else "Best weather window within 48 hours"))
+        st.markdown("### 🕐 " + ("Beste weervenster binnen 72 uur"
+                                  if is_nl else "Best weather window within 72 hours"))
 
         col_now, col_best = st.columns(2)
         col_now.metric(
@@ -2104,23 +2104,23 @@ favourable heading *within* that corridor based on wind and current.
             st.success(
                 f"✅ Het gekozen vertrekmoment is al een goed weervenster "
                 f"(**{current_score:.0f}%** gunstig). Geen significant beter alternatief "
-                f"binnen 48 uur gevonden. Verwachte reistijd: **{curr_h}u {curr_m_:02d}m**."
+                f"binnen 72 uur gevonden. Verwachte reistijd: **{curr_h}u {curr_m_:02d}m**."
                 if is_nl else
                 f"✅ The chosen departure is already a good weather window "
                 f"(**{current_score:.0f}%** favourable). No significantly better alternative "
-                f"found within 48 hours. Estimated travel time: **{curr_h}h {curr_m_:02d}m**."
+                f"found within 72 hours. Estimated travel time: **{curr_h}h {curr_m_:02d}m**."
             )
         else:
             st.info(
                 f"ℹ️ Het gekozen vertrekmoment scoort **{current_score:.0f}%** gunstig "
                 f"(reistijd: **{curr_h}u {curr_m_:02d}m**). "
-                f"Het beste alternatief binnen 48 uur scoort **{best_score:.0f}%** "
+                f"Het beste alternatief binnen 72 uur scoort **{best_score:.0f}%** "
                 f"(over {best_offset} uur, geschatte reistijd: ~{best_h}u {best_m_:02d}m). "
                 f"Het verschil is niet groot genoeg om aanzienlijk later te vertrekken aan te raden."
                 if is_nl else
                 f"ℹ️ The chosen departure scores **{current_score:.0f}%** favourable "
                 f"(travel time: **{curr_h}h {curr_m_:02d}m**). "
-                f"The best alternative within 48 hours scores **{best_score:.0f}%** "
+                f"The best alternative within 72 hours scores **{best_score:.0f}%** "
                 f"(in {best_offset} hours, estimated travel time: ~{best_h}h {best_m_:02d}m). "
                 f"The difference is not large enough to strongly recommend departing later."
             )
@@ -2156,8 +2156,8 @@ favourable heading *within* that corridor based on wind and current.
             name="Beste venster" if is_nl else "Best window"
         ))
         fig_win.update_layout(
-            title="Weervenster-kwaliteit per uur (komende 48 uur)" if is_nl
-                  else "Weather window quality per hour (next 48 hours)",
+            title="Weervenster-kwaliteit per uur (komende 72 uur)" if is_nl
+                  else "Weather window quality per hour (next 72 hours)",
             xaxis_title="Vertrekmoment" if is_nl else "Departure time",
             yaxis_title="% gunstig zeilweer" if is_nl else "% favourable sailing",
             yaxis=dict(range=[0, 105]),
