@@ -15,186 +15,711 @@ st.set_page_config(page_title="Sailing & Marine Weather Historian Pro", layout="
 st.markdown(
     """
     <style>
-        section[data-testid="stSidebar"] {
-            width: 350px !important;
-        }
+        section[data-testid="stSidebar"] { width: 350px !important; }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# --- Taal & Vertalingen ---
+# ── Taal ──────────────────────────────────────────────────────────────────────
 with st.sidebar:
     lang = st.selectbox("Taal / Language", ["🇳🇱 Nederlands", "🇬🇧 English"], index=0)
-
 is_nl = "Nederlands" in lang
 
 t = {
-    "title": "⛵ Sailing Weather & Marine History Planner",
-    "subtitle": "Geavanceerde tochtplanning met automatische maritieme water-routing, getijdenstroom (+/- Oost/West as), getijhoogte in decimeters (dm) en GPX-export." if is_nl else "Advanced passage planning with automated maritime water routing, tidal currents (+/- East/West axis), tide height in decimeters (dm), and GPX export.",
-    "nav_header": "Navigatie" if is_nl else "Navigation",
-    "m1": "Enkele Locatie & 12M Historie" if is_nl else "Single Location & 12M History",
-    "m2": "Multi-Jaar Vergelijking (10 Jaar)" if is_nl else "Multi-Year Comparison (10 Years)",
-    "m3": "Optimale Route & Stroomrouting" if is_nl else "Optimal Route & Current Routing",
-    "m4": "14-Daagse Verwachting & Getijden" if is_nl else "14-Day Forecast & Tides",
-    "m5": "Technische Bronnen & Disclaimer" if is_nl else "Technical Sources & Disclaimer",
-    "m6": "☕ Donaties & Support" if is_nl else "☕ Donations & Support",
-    "wind_unit": "Wind eenheid" if is_nl else "Wind Unit",
-    "filters_sub": "Zeilcondities Filter" if is_nl else "Sailing Conditions Filter",
-    "w_speed": "Windsnelheid (Knopen)" if is_nl else "Wind Speed (Knots)",
-    "w_gust": "Max. Windstoot (Knopen)" if is_nl else "Max. Wind Gust (Knots)",
-    "w_wave": "Max. Golfhoogte (Meters)" if is_nl else "Max. Wave Height (Meters)",
-    "apply": "Toepassen" if is_nl else "Apply",
-    "why_title": "💡 Waarom deze app is ontwikkeld" if is_nl else "💡 Why this app was developed",
-    "why_text": (
-        "Deze app is ontstaan vanuit de persoonlijke behoefte om te kunnen bepalen wat de beste periode is "
-        "om een bepaalde bestemming te bezoeken qua wind, golven, stormrisico en andere weersomstandigheden."
+    "title":    "⛵ Sailing Weather & Marine History Planner",
+    "subtitle": (
+        "Geavanceerde tochtplanning met automatische maritieme water-routing, "
+        "getijdenstroom (+/- Oost/West as), getijhoogte in decimeters (dm) en GPX-export."
         if is_nl else
-        "This app was created out of a personal need to determine the best period to visit a specific destination "
-        "regarding wind, waves, storm risk, and other weather conditions."
+        "Advanced passage planning with automated maritime water routing, "
+        "tidal currents (+/- East/West axis), tide height in decimeters (dm), and GPX export."
     ),
-    "loc_input": "Locatie / Haven" if is_nl else "Location / Harbor",
-    "country_filter": "Landfilter" if is_nl else "Country Filter",
-    "all_countries": "Alle Landen (Geen filter)" if is_nl else "All Countries (No filter)",
+    "nav_header":   "Navigatie"                       if is_nl else "Navigation",
+    "m1": "Enkele Locatie & 12M Historie"             if is_nl else "Single Location & 12M History",
+    "m2": "Multi-Jaar Vergelijking (10 Jaar)"         if is_nl else "Multi-Year Comparison (10 Years)",
+    "m3": "Kortste Route (SeaRoute)"                  if is_nl else "Shortest Route (SeaRoute)",
+    "m3b": "Weergestuurde Routeoptimalisatie (7d)"     if is_nl else "Weather-Optimised Routing (7d)",
+    "m4": "14-Daagse Verwachting & Getijden"          if is_nl else "14-Day Forecast & Tides",
+    "m5": "Technische Bronnen & Disclaimer"           if is_nl else "Technical Sources & Disclaimer",
+    "m6": "☕ Donaties & Support"                     if is_nl else "☕ Donations & Support",
+    "wind_unit":    "Wind eenheid"                    if is_nl else "Wind Unit",
+    "filters_sub":  "Zeilcondities Filter"            if is_nl else "Sailing Conditions Filter",
+    "w_speed":      "Windsnelheid (Knopen)"           if is_nl else "Wind Speed (Knots)",
+    "w_gust":       "Max. Windstoot (Knopen)"         if is_nl else "Max. Wind Gust (Knots)",
+    "w_wave":       "Max. Golfhoogte (Meters)"        if is_nl else "Max. Wave Height (Meters)",
+    "apply":        "Toepassen"                       if is_nl else "Apply",
+    "why_title":    "💡 Waarom deze app is ontwikkeld" if is_nl else "💡 Why this app was developed",
+    "why_text_nl": """
+Deze app is ontstaan vanuit de behoefte om vooraf een idee te krijgen wat de beste periode is om een
+bepaalde bestemming te bezoeken qua wind, golven, stormrisico en andere weersomstandigheden.
+Uiteraard zijn er ook betaalde apps die dit doen, maar die zijn best vaak prijzig, zeker als het
+primaire doel is een 'gevoel' te krijgen bij een tocht en wat geschikte momenten zijn.
+
+Daarnaast houdt een route die een regulier AI of app uitzet geen rekening met de windparken die
+momenteel overal ontstaan en waar je niet doorheen kunt. Deze routeplanner probeert daar wel rekening
+mee te houden en zou daarmee een meer realistische vaarafstand en reistijd tonen.
+
+De verdere ontwikkeling van deze pagina hangt sterk af van jouw input. Mocht je suggesties of ideeën
+hebben, lees ik die graag. Je kunt dit doorgeven via een donatie aan de pagina — daar kun je een
+bericht bij achterlaten.
+""",
+    "why_text_en": """
+This app was created out of a need to get an advance idea of the best period to visit a specific
+destination in terms of wind, waves, storm risk and other weather conditions.
+There are paid apps that do this too, but they can be quite expensive — especially when the primary
+goal is simply to get a 'feel' for a passage and identify suitable windows.
+
+In addition, routes generated by standard AI tools or apps do not account for the offshore wind farms
+that are rapidly appearing everywhere and cannot be sailed through. This route planner attempts to
+take these into account, providing a more realistic sailing distance and travel time.
+
+The further development of this page depends strongly on your input. If you have suggestions or ideas,
+I would love to hear them. You can share these by leaving a message with a donation to the page.
+""",
+    "loc_input":       "Locatie / Haven"              if is_nl else "Location / Harbor",
+    "country_filter":  "Landfilter"                   if is_nl else "Country Filter",
+    "all_countries":   "Alle Landen (Geen filter)"    if is_nl else "All Countries (No filter)",
+    "loc_shared_info": (
+        "📍 Locatie doorgezet vanuit een andere pagina. Pas aan indien gewenst."
+        if is_nl else
+        "📍 Location carried over from another page. Adjust if needed."
+    ),
+
+    # M1
+    "m1_chart_title":  "Geschikt Zeilweer per Maand (%)"    if is_nl else "Suitable Sailing Weather by Month (%)",
+    "m1_chart_y":      "Geschikt Zeilweer (%)"              if is_nl else "Suitable Sailing Weather (%)",
+    "m1_chart_x":      "Maand"                              if is_nl else "Month",
+    "m1_metric_ideal": "Geschikt Zeilweer"                  if is_nl else "Suitable Sailing",
+    "m1_metric_wind":  "Gem. Wind"                          if is_nl else "Avg. Wind",
+    "m1_metric_gust":  "Max. Stoot"                         if is_nl else "Max. Gust",
+    "m1_metric_dir":   "Overheersende Wind"                 if is_nl else "Dominant Wind",
+    "m1_metric_rain":  "Totale Neerslag"                    if is_nl else "Total Precipitation",
+    "m1_table_header": "📋 Maandelijkse Details"            if is_nl else "📋 Monthly Details",
+    "m1_col_month":    "Maand"                              if is_nl else "Month",
+    "m1_col_ideal":    "Geschikt Zeilweer (%)"              if is_nl else "Suitable Sailing (%)",
+    "m1_col_wind":     "Gem. Wind"                          if is_nl else "Avg. Wind",
+    "m1_col_gust":     "Max. Stoot"                         if is_nl else "Max. Gust",
+    "m1_col_dir":      "Overheersende Wind"                 if is_nl else "Dominant Wind",
+    "m1_col_rain":     "Neerslag (mm)"                      if is_nl else "Precipitation (mm)",
+    "m1_spinner":      "Historie ophalen voor"              if is_nl else "Fetching history for",
+    "m1_loc_select":   "Selecteer de juiste locatie"        if is_nl else "Select the correct location",
+    "m1_no_loc":       "Geen locatie gevonden voor"         if is_nl else "No location found for",
+
+    # M2
+    "m2_groupby":         "Groepering op X-as"              if is_nl else "Group by X-axis",
+    "m2_per_month":       "Per Maand"                       if is_nl else "Per Month",
+    "m2_per_week":        "Per Week"                        if is_nl else "Per Week",
+    "m2_x_month":         "Maand"                          if is_nl else "Month",
+    "m2_x_week":          "Week (1-52)"                     if is_nl else "Week (1-52)",
+    "m2_spinner":         "Data verzamelen voor"            if is_nl else "Collecting data for",
+    "m2_spinner_suffix":  "over de afgelopen 10 jaar..."    if is_nl else "over the past 10 years...",
+    "m2_chart_sfx":       "vs. Lijnen (10 Jaar Historie)"   if is_nl else "vs. Lines (10-Year History)",
+    "m2_most_recent":     "Meest Recent"                    if is_nl else "Most Recent",
+    "m2_year_label":      "Jaar"                            if is_nl else "Year",
+    "m2_col_ideal":       "Geschikt Zeilweer (%)"           if is_nl else "Suitable Sailing (%)",
+    "m2_col_wind":        "Gem. Wind"                       if is_nl else "Avg. Wind",
+    "m2_col_gust":        "Max. Stoot"                      if is_nl else "Max. Gust",
+    "m2_col_dir":         "Overheersende Wind"              if is_nl else "Dominant Wind",
+    "m2_col_temp":        "Gem. Temp (°C)"                  if is_nl else "Avg. Temp (°C)",
+    "m2_col_rain":        "Neerslag (mm)"                   if is_nl else "Precipitation (mm)",
+    "m2_col_wave":        "Gem. Golf (m)"                   if is_nl else "Avg. Wave (m)",
+    "m2_loc_select":      "Selecteer de juiste locatie"     if is_nl else "Select the correct location",
+    "m2_no_loc":          "Geen locatie gevonden."          if is_nl else "No location found.",
+
+    # M3
+    "m3_intro":           "Voer havennamen in en filter eventueel per land."     if is_nl else "Enter harbor names and optionally filter by country.",
+    "m3_start":           "Startpunt"                                            if is_nl else "Departure Port",
+    "m3_via":             "Optionele Tussenhaven"                                if is_nl else "Optional Wayport",
+    "m3_end":             "Bestemming"                                           if is_nl else "Destination",
+    "m3_speed":           "Gem. Bootsnelheid (knopen)"                          if is_nl else "Avg. Boat Speed (knots)",
+    "m3_dep_date":        "Vertrekdatum"                                         if is_nl else "Departure Date",
+    "m3_dep_time":        "Vertrektijd"                                          if is_nl else "Departure Time",
+    "m3_search_btn":      "🔍 Zoek & Bevestig Havens"                           if is_nl else "🔍 Search & Confirm Ports",
+    "m3_confirm_header":  "#### ⚓ Bevestig de juiste havens:"                  if is_nl else "#### ⚓ Confirm the correct ports:",
+    "m3_confirm_start":   "Startpunt bevestigen"                                if is_nl else "Confirm departure port",
+    "m3_confirm_end":     "Bestemming bevestigen"                               if is_nl else "Confirm destination port",
+    "m3_confirm_via":     "Tussenhaven bevestigen"                              if is_nl else "Confirm wayport",
+    "m3_calc_btn":        "🚀 Start Maritieme Route Berekening"                 if is_nl else "🚀 Start Maritime Route Calculation",
+    "m3_no_ports":        "Eén van de havens kon niet worden gevonden."         if is_nl else "One of the ports could not be found.",
+    "m3_spinner":         "Maritieme route berekenen..."                        if is_nl else "Calculating maritime route...",
+    "m3_route_error":     "Fout bij route berekening:"                          if is_nl else "Route calculation error:",
+    "m3_success":         "🧭 **Route Berekend:** Open water afstand is"        if is_nl else "🧭 **Route Calculated:** Open water distance is",
+    "m3_metric_dist":     "Afstand"                 if is_nl else "Distance",
+    "m3_metric_time":     "Verwachte reistijd"      if is_nl else "Estimated travel time",
+    "m3_metric_speed":    "Bootsnelheid"            if is_nl else "Boat speed",
+    "m3_metric_arr":      "Verwachte aankomst"      if is_nl else "Estimated arrival",
+    "m3_metric_dep":      "Vertrek"                 if is_nl else "Departure",
+    "m3_night_warn":      "🌙 Let op: je vaart deels 's nachts (tussen 22:00 en 06:00 plaatselijke tijd)." if is_nl else "🌙 Note: part of this passage is at night (between 22:00 and 06:00 local time).",
+    "m3_night_ok":        "☀️ Volledig dagvaren bij deze snelheid en dit vertrekmoment." if is_nl else "☀️ Fully daytime passage at this speed and departure time.",
+    "m3_wp_table":        "#### 📊 Waypoint Details, Oost/West Stroom & Getij" if is_nl else "#### 📊 Waypoint Details, East/West Current & Tide",
+    "m3_col_wp":          "Waypoint",
+    "m3_col_lat":         "Latitude",
+    "m3_col_lon":         "Longitude",
+    "m3_col_time":        "Tijd"                    if is_nl else "Time",
+    "m3_col_tide":        "Getij (dm)"              if is_nl else "Tide (dm)",
+    "m3_col_current":     "Stroom (m/s)"            if is_nl else "Current (m/s)",
+    "m3_col_ew":          "Oost/West (+/-)"         if is_nl else "East/West (+/-)",
+    "m3_col_dir":         "Stroomrichting"          if is_nl else "Current Direction",
+    "m3_col_wind":        "Windsnelheid (kt)"       if is_nl else "Wind Speed (kt)",
+    "m3_col_wave":        "Golfhoogte (m)"          if is_nl else "Wave Height (m)",
+    "m3_col_src":         "Stroombron"              if is_nl else "Current Source",
+    "m3_gpx_btn":         "📥 Download GPX",
+    "m3_maps_btn":        "🗺️ Open in Google Maps",
+    "m3_start_filter":    "Start Landfilter"        if is_nl else "Start Country Filter",
+    "m3_via_filter":      "Tussen Landfilter"       if is_nl else "Via Country Filter",
+    "m3_end_filter":      "Bestemming Landfilter"   if is_nl else "Destination Country Filter",
+
+    # M4
+    "m4_click_hint":     "⬆ Klik op een dag in de grafiek hierboven om de uurdetails te laden." if is_nl else "⬆ Click a day in the chart above to load hourly details.",
+    "m4_overview":       "14-Daags Overzicht voor"                              if is_nl else "14-Day Overview for",
+    "m4_bar_title":      "Percentage Geschikt Zeilweer per Dag (%)"             if is_nl else "Percentage Suitable Sailing Weather per Day (%)",
+    "m4_bar_x":          "Datum"                                                if is_nl else "Date",
+    "m4_bar_y":          "Geschikt Zeilweer (%)"                                if is_nl else "Suitable Sailing (%)",
+    "m4_hourly_header":  "### Uur-tot-Uur Verwachting, Oost/West Stroom & Getij voor" if is_nl else "### Hourly Forecast, East/West Current & Tide for",
+    "m4_metric_sail":    "Zeilbaarheid Dag"         if is_nl else "Daily Sailability",
+    "m4_metric_wind":    "Gem. Wind"                if is_nl else "Avg. Wind",
+    "m4_metric_gust":    "Max Stoot"                if is_nl else "Max Gust",
+    "m4_metric_dir":     "Overheersende Wind"       if is_nl else "Dominant Wind",
+    "m4_metric_rain":    "Totale Regen"             if is_nl else "Total Rain",
+    "m4_wind_trace":     "Wind",
+    "m4_wave_trace":     "Golfhoogte (m)"           if is_nl else "Wave Height (m)",
+    "m4_wind_ttl":       "Wind & Golven op"         if is_nl else "Wind & Waves on",
+    "m4_wind_y":         "Wind",
+    "m4_wave_y":         "Golf (m)"                 if is_nl else "Wave (m)",
+    "m4_ew_api":         "Oost/West Stroom API (+ = Oost, - = West) [m/s]"    if is_nl else "East/West Current API (+ = East, - = West) [m/s]",
+    "m4_ew_atlas":       "Oost/West Stroom Stroomatlas (indicatief) [m/s]"     if is_nl else "East/West Current Tidal Atlas (indicative) [m/s]",
+    "m4_tide_trace":     "Getijhoogte (dm)"         if is_nl else "Tide Height (dm)",
+    "m4_tide_ttl":       "Getijdenstroom & Getijhoogte (dm) op"                if is_nl else "Tidal Current & Tide Height (dm) on",
+    "m4_tide_y":         "Oost/West Stroom (m/s)"   if is_nl else "East/West Current (m/s)",
+    "m4_tide_y2":        "Getijhoogte (dm)"         if is_nl else "Tide Height (dm)",
+    "m4_atlas_info":     "ℹ️ Geen live stroomdata via API voor deze locatie — terugvalwaarden uit wereldwijde stroomatlas getoond (indicatief)." if is_nl else "ℹ️ No live current data via API for this location — fallback values from global tidal atlas shown (indicative).",
+    "m4_atlas_partial":  "ℹ️ Ontbrekende uurwaarden aangevuld uit wereldwijde stroomatlas (gestippelde lijn, indicatief)." if is_nl else "ℹ️ Missing hourly values filled from global tidal atlas (dotted line, indicative).",
+    "m4_table_time":     "Tijd"                     if is_nl else "Time",
+    "m4_table_wind":     "Wind",
+    "m4_table_gust":     "Stoten (kt)"              if is_nl else "Gusts (kt)",
+    "m4_table_wdir":     "Windrichting"             if is_nl else "Wind Direction",
+    "m4_table_wave":     "Golfhoogte (m)"           if is_nl else "Wave Height (m)",
+    "m4_table_curr":     "Tot. Stroom (m/s)"        if is_nl else "Total Current (m/s)",
+    "m4_table_ew":       "Oost/West Stroom (+/- m/s)" if is_nl else "East/West Current (+/- m/s)",
+    "m4_table_ns":       "Noord/Zuid Stroom (+/- m/s)" if is_nl else "North/South Current (+/- m/s)",
+    "m4_table_cdir":     "Stroomrichting"           if is_nl else "Current Direction",
+    "m4_table_tide":     "Getijhoogte (dm)"         if is_nl else "Tide Height (dm)",
+    "m4_table_rain":     "Neerslag (mm)"            if is_nl else "Precipitation (mm)",
+    "m4_table_src":      "Stroombron"               if is_nl else "Current Source",
+    "m4_spinner":        "Verwachting & getijden ophalen..." if is_nl else "Fetching forecast & tides...",
+    "m4_loc_select":     "Selecteer locatie"        if is_nl else "Select location",
+    "m4_no_loc":         "Locatie niet gevonden."   if is_nl else "Location not found.",
 }
 
-# FIX 5: Taalafhankelijke maandnamen als lookup (was hardcoded NL in m2)
-MONTH_NAMES_NL = {1:"01 - Jan", 2:"02 - Feb", 3:"03 - Mar", 4:"04 - Apr",
-                  5:"05 - Mei", 6:"06 - Jun", 7:"07 - Jul", 8:"08 - Aug",
-                  9:"09 - Sep", 10:"10 - Okt", 11:"11 - Nov", 12:"12 - Dec"}
-MONTH_NAMES_EN = {1:"01 - Jan", 2:"02 - Feb", 3:"03 - Mar", 4:"04 - Apr",
-                  5:"05 - May", 6:"06 - Jun", 7:"07 - Jul", 8:"08 - Aug",
-                  9:"09 - Sep", 10:"10 - Oct", 11:"11 - Nov", 12:"12 - Dec"}
+# ── Maandnamen ──────────────────────────────────────────────────────────────
+MONTH_NAMES_NL = {1:"01-Jan",2:"02-Feb",3:"03-Mar",4:"04-Apr",5:"05-Mei",
+                  6:"06-Jun",7:"07-Jul",8:"08-Aug",9:"09-Sep",10:"10-Okt",
+                  11:"11-Nov",12:"12-Dec"}
+MONTH_NAMES_EN = {1:"01-Jan",2:"02-Feb",3:"03-Mar",4:"04-Apr",5:"05-May",
+                  6:"06-Jun",7:"07-Jul",8:"08-Aug",9:"09-Sep",10:"10-Oct",
+                  11:"11-Nov",12:"12-Dec"}
 
 st.title(t["title"])
 st.write(t["subtitle"])
 
-def degrees_to_cardinal(d):
-    if pd.isna(d):
+# ══════════════════════════════════════════════════════════════════════════════
+# HULPFUNCTIES
+# ══════════════════════════════════════════════════════════════════════════════
+
+def degrees_to_cardinal(d, nl=True):
+    if d is None or (isinstance(d, float) and np.isnan(d)):
         return "-"
     try:
-        dirs = ['N', 'NNO', 'NO', 'ONO', 'O', 'OZO', 'ZO', 'ZZO',
-                'Z', 'ZZW', 'ZW', 'WZW', 'W', 'WNW', 'NW', 'NNW']
+        dirs_nl = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW']
+        dirs_en = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+        dirs = dirs_nl if nl else dirs_en
         ix = int((float(d) + 11.25) / 22.5) % 16
         return dirs[ix]
     except (ValueError, TypeError):
         return "-"
 
-# --- Sidebar Navigatie (FIX 7: st.radio vervangt losse buttons) ---
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WERELDWIJDE STROOMATLAS  (HR33 + internationale bronnen)
+#
+# Bronnen:
+#  - NL: Hydrografische Dienst HR33 / Stroomatlas Waddenzee, Noordzee, Schelde
+#  - UK: UKHO Tidal Stream Atlases (NP-series)  – Kanaal, Ierse Zee, Schotse kust
+#  - Oceanografisch: HYCOM global reanalysis / OSCAR surface currents (gemiddeld)
+#  - Atlantisch: US Navy / NOAA Gulf Stream & Labrador-stroom atlassen
+#  - Middellandse Zee: SHOM (FR) / IHO med-atlas indicatieve waarden
+#  - Pacific / Indische Oceaan: NOAA NCEI global climatological currents
+#
+# Structuur: regio-code -> {"vloedstroom": (m/s, graden), "ebbstroom": (m/s, graden)}
+# Voor gebieden zonder getij wordt een constante reststroming gebruikt;
+# vloed/ebb worden dan beide op dezelfde richting gezet (getij-onafhankelijk).
+# ══════════════════════════════════════════════════════════════════════════════
+GLOBAL_CURRENT_ATLAS = {
+    # ── Noord-Europa / NL kustwateren (HR33) ────────────────────────────────
+    "waddenzee_west":     {"vloedstroom": (0.80, 80),  "ebbstroom": (0.70, 260)},
+    "waddenzee_oost":     {"vloedstroom": (0.60, 90),  "ebbstroom": (0.50, 270)},
+    "westerschelde":      {"vloedstroom": (1.10, 70),  "ebbstroom": (1.00, 250)},
+    "oosterschelde":      {"vloedstroom": (0.90, 90),  "ebbstroom": (0.80, 270)},
+    "ijmuiden":           {"vloedstroom": (0.40, 15),  "ebbstroom": (0.40, 195)},
+    "noordzee_nl_kust":   {"vloedstroom": (0.50, 20),  "ebbstroom": (0.40, 200)},
+    "noordzee_midden":    {"vloedstroom": (0.30, 350), "ebbstroom": (0.30, 170)},
+    "skagerrak":          {"vloedstroom": (0.30, 100), "ebbstroom": (0.30, 280)},
+    "kattegat":           {"vloedstroom": (0.25, 340), "ebbstroom": (0.25, 160)},
+    # ── Engelse Kanaal & omgeving (UKHO NP-atlassen) ───────────────────────
+    "engelse_kanaal_west":{"vloedstroom": (1.20, 55),  "ebbstroom": (1.10, 235)},
+    "engelse_kanaal_oost":{"vloedstroom": (1.00, 60),  "ebbstroom": (0.90, 240)},
+    "dover_straat":       {"vloedstroom": (2.50, 50),  "ebbstroom": (2.20, 230)},
+    "ierse_zee":          {"vloedstroom": (0.70, 340), "ebbstroom": (0.65, 160)},
+    "schotse_westkust":   {"vloedstroom": (0.60, 10),  "ebbstroom": (0.55, 190)},
+    "schotse_noordkust":  {"vloedstroom": (1.50, 90),  "ebbstroom": (1.30, 270)},  # Pentland Firth
+    "north_sea_central":  {"vloedstroom": (0.35, 340), "ebbstroom": (0.35, 160)},
+    # ── Scandinavische wateren ──────────────────────────────────────────────
+    "noorwegen_westkust": {"vloedstroom": (0.40, 350), "ebbstroom": (0.35, 170)},
+    "baltische_zee":      {"vloedstroom": (0.15, 90),  "ebbstroom": (0.15, 270)},  # nauwelijks getij
+    # ── Atlantische Oceaan ──────────────────────────────────────────────────
+    "atlantisch_nno":     {"vloedstroom": (0.30, 350), "ebbstroom": (0.25, 170)},  # Noord-Atlantisch
+    "golf_stream":        {"vloedstroom": (1.50, 45),  "ebbstroom": (1.30, 45)},   # quasi-constant NO
+    "labrador_stroom":    {"vloedstroom": (0.40, 200), "ebbstroom": (0.35, 200)},  # quasi-constant Z
+    "atlantisch_tropisch":{"vloedstroom": (0.35, 270), "ebbstroom": (0.30, 270)},  # NE Trade Current W
+    "atlantisch_equator": {"vloedstroom": (0.50, 270), "ebbstroom": (0.45, 270)},  # Equatoriaalstroom W
+    "atlantisch_zo":      {"vloedstroom": (0.40, 300), "ebbstroom": (0.35, 300)},  # Benguelastroom NW
+    "atlantisch_zw":      {"vloedstroom": (0.30, 200), "ebbstroom": (0.25, 200)},  # Braziliaanse kust Z
+    "golf_mexico":        {"vloedstroom": (0.60, 30),  "ebbstroom": (0.55, 30)},
+    "caraibisch":         {"vloedstroom": (0.45, 295), "ebbstroom": (0.40, 295)},  # Caraïbische stroom W
+    # ── Middellandse Zee (SHOM / IHO atlas) ────────────────────────────────
+    "straat_gibraltar":   {"vloedstroom": (0.80, 90),  "ebbstroom": (0.60, 270)},  # instroom Atl → Med
+    "middellandse_west":  {"vloedstroom": (0.25, 80),  "ebbstroom": (0.20, 260)},
+    "middellandse_oost":  {"vloedstroom": (0.20, 90),  "ebbstroom": (0.15, 270)},
+    "adriatische_zee":    {"vloedstroom": (0.30, 310), "ebbstroom": (0.25, 130)},
+    "egeische_zee":       {"vloedstroom": (0.25, 180), "ebbstroom": (0.20, 0)},
+    "suez_kanaal":        {"vloedstroom": (0.50, 145), "ebbstroom": (0.45, 325)},  # ZO/NW getijstroom
+    # ── Rode Zee & Arabische Zee ────────────────────────────────────────────
+    "rode_zee":           {"vloedstroom": (0.40, 145), "ebbstroom": (0.35, 325)},
+    "arabische_zee":      {"vloedstroom": (0.35, 220), "ebbstroom": (0.30, 40)},   # Somalische stroom
+    # ── Indische Oceaan ─────────────────────────────────────────────────────
+    "indische_oceaan_n":  {"vloedstroom": (0.50, 45),  "ebbstroom": (0.45, 225)},  # moesson-afhankelijk
+    "indische_oceaan_z":  {"vloedstroom": (0.35, 270), "ebbstroom": (0.30, 270)},  # Agulhasstroom / ZW
+    "agulhas_stroom":     {"vloedstroom": (1.20, 220), "ebbstroom": (1.10, 220)},  # quasi-constant ZW
+    "straat_malakka":     {"vloedstroom": (0.80, 310), "ebbstroom": (0.70, 130)},
+    # ── Stille Oceaan ───────────────────────────────────────────────────────
+    "kuroshio":           {"vloedstroom": (1.30, 45),  "ebbstroom": (1.20, 45)},   # quasi-constant NO
+    "california_stroom":  {"vloedstroom": (0.30, 180), "ebbstroom": (0.25, 180)},  # quasi-constant Z
+    "pacific_no_trade":   {"vloedstroom": (0.35, 270), "ebbstroom": (0.30, 270)},  # NE Passat W
+    "pacific_equator":    {"vloedstroom": (0.60, 270), "ebbstroom": (0.55, 270)},
+    "pacific_zo":         {"vloedstroom": (0.25, 300), "ebbstroom": (0.20, 300)},  # Humboldtstroom NW
+    "grote_barrière":     {"vloedstroom": (0.70, 330), "ebbstroom": (0.60, 150)},  # Coral Sea
+    # ── Poolgebieden ────────────────────────────────────────────────────────
+    "arctisch":           {"vloedstroom": (0.15, 200), "ebbstroom": (0.10, 20)},
+    "antarctisch":        {"vloedstroom": (0.40, 90),  "ebbstroom": (0.35, 90)},   # Circumpoolstroom O
+    # ── Fallback ────────────────────────────────────────────────────────────
+    "open_zee":           {"vloedstroom": (0.20, 0),   "ebbstroom": (0.20, 180)},
+}
+
+
+def get_atlas_region(lat, lon):
+    """Bepaal het meest passende stroomatlas-gebied op basis van lat/lon."""
+    # Nederland / Noord-Europa
+    if 52.8 <= lat <= 55.5 and 4.5 <= lon <= 6.5:
+        return "waddenzee_west"
+    if 52.8 <= lat <= 55.5 and 6.5 < lon <= 8.5:
+        return "waddenzee_oost"
+    if 51.0 <= lat <= 51.7 and 3.3 <= lon <= 4.2:
+        return "westerschelde"
+    if 51.5 <= lat <= 51.8 and 3.9 <= lon <= 4.5:
+        return "oosterschelde"
+    if 52.3 <= lat <= 52.6 and 4.3 <= lon <= 4.9:
+        return "ijmuiden"
+    if 56.5 <= lat <= 59.0 and 8.0 <= lon <= 13.0:
+        return "skagerrak"
+    if 55.5 <= lat <= 57.5 and 10.0 <= lon <= 13.0:
+        return "kattegat"
+    if 54.0 <= lat <= 59.0 and 13.0 < lon <= 30.0:
+        return "baltische_zee"
+    if 57.0 <= lat <= 62.0 and 4.0 <= lon <= 8.0:
+        return "noorwegen_westkust"
+    # Engelse Kanaal & UK
+    if 50.5 <= lat <= 51.2 and 1.0 <= lon <= 2.5:
+        return "dover_straat"
+    if 49.0 <= lat <= 51.5 and -5.0 <= lon <= 1.0:
+        return "engelse_kanaal_west"
+    if 49.0 <= lat <= 52.0 and 1.0 < lon <= 4.0:
+        return "engelse_kanaal_oost"
+    if 51.0 <= lat <= 55.0 and -6.5 <= lon <= -3.5:
+        return "ierse_zee"
+    if 54.0 <= lat <= 59.0 and -7.0 <= lon <= -3.0:
+        return "schotse_westkust"
+    if 58.5 <= lat <= 59.5 and -4.0 <= lon <= -1.0:
+        return "schotse_noordkust"
+    if 51.5 <= lat <= 58.0 and 2.0 <= lon <= 8.0:
+        return "north_sea_central"
+    if 51.5 <= lat <= 55.0 and 2.0 <= lon <= 5.0:
+        return "noordzee_nl_kust"
+    if 52.0 <= lat <= 57.0 and 2.0 <= lon <= 8.0:
+        return "noordzee_midden"
+    # Middellandse Zee
+    if 35.5 <= lat <= 36.5 and -6.0 <= lon <= -5.0:
+        return "straat_gibraltar"
+    if 35.0 <= lat <= 44.0 and -5.0 <= lon <= 10.0:
+        return "middellandse_west"
+    if 30.0 <= lat <= 44.0 and 10.0 < lon <= 36.0:
+        return "middellandse_oost"
+    if 40.0 <= lat <= 46.0 and 12.0 <= lon <= 21.0:
+        return "adriatische_zee"
+    if 35.0 <= lat <= 42.0 and 21.0 < lon <= 30.0:
+        return "egeische_zee"
+    if 29.0 <= lat <= 32.0 and 32.0 <= lon <= 34.0:
+        return "suez_kanaal"
+    # Rode Zee & Arabische Zee
+    if 12.0 <= lat <= 30.0 and 32.0 <= lon <= 44.0:
+        return "rode_zee"
+    if 5.0 <= lat <= 25.0 and 44.0 < lon <= 65.0:
+        return "arabische_zee"
+    # Straat Malakka
+    if 1.0 <= lat <= 7.0 and 99.0 <= lon <= 105.0:
+        return "straat_malakka"
+    # Indische Oceaan
+    if 0 <= lat <= 25.0 and 50.0 <= lon <= 90.0:
+        return "indische_oceaan_n"
+    if -40.0 <= lat < 0 and 20.0 <= lon <= 115.0:
+        return "indische_oceaan_z"
+    if -40.0 <= lat <= -25.0 and 15.0 <= lon <= 40.0:
+        return "agulhas_stroom"
+    # Atlantische Oceaan
+    if 25.0 <= lat <= 45.0 and -80.0 <= lon <= -40.0:
+        return "golf_stream"
+    if 45.0 <= lat <= 65.0 and -60.0 <= lon <= -30.0:
+        return "labrador_stroom"
+    if 10.0 <= lat <= 30.0 and -80.0 <= lon <= -10.0:
+        return "atlantisch_tropisch"
+    if -5.0 <= lat <= 10.0 and -50.0 <= lon <= 10.0:
+        return "atlantisch_equator"
+    if -35.0 <= lat < 0 and -20.0 <= lon <= 10.0:
+        return "atlantisch_zo"
+    if -35.0 <= lat < 0 and -55.0 <= lon <= -20.0:
+        return "atlantisch_zw"
+    if 18.0 <= lat <= 30.0 and -98.0 <= lon <= -82.0:
+        return "golf_mexico"
+    if 10.0 <= lat <= 22.0 and -88.0 <= lon <= -60.0:
+        return "caraibisch"
+    if 30.0 <= lat <= 65.0 and -40.0 <= lon <= -10.0:
+        return "atlantisch_nno"
+    # Stille Oceaan
+    if 25.0 <= lat <= 45.0 and 120.0 <= lon <= 170.0:
+        return "kuroshio"
+    if 25.0 <= lat <= 50.0 and -130.0 <= lon <= -115.0:
+        return "california_stroom"
+    if 5.0 <= lat <= 25.0 and 150.0 <= lon <= -150.0:
+        return "pacific_no_trade"
+    if -5.0 <= lat <= 5.0 and 100.0 <= lon <= -80.0:
+        return "pacific_equator"
+    if -45.0 <= lat < 0 and -90.0 <= lon <= -70.0:
+        return "pacific_zo"
+    if -25.0 <= lat <= -10.0 and 145.0 <= lon <= 160.0:
+        return "grote_barrière"
+    # Poolgebieden
+    if lat >= 70.0:
+        return "arctisch"
+    if lat <= -60.0:
+        return "antarctisch"
+    return "open_zee"
+
+
+def get_atlas_current(lat, lon, dt):
+    """
+    Geeft stroomatlas-fallback voor een locatie op een tijdstip.
+    Sinusoïde op 12.4-uur getijcyclus. Constante stromen (bijv. Golfstroom)
+    hebben identieke vloed/ebb-waarden zodat ze stabiel blijven.
+    Geeft (snelheid_m_s, richting_graden, kardinaal, oost_ms, noord_ms, bron).
+    """
+    region = get_atlas_region(lat, lon)
+    data = GLOBAL_CURRENT_ATLAS[region]
+
+    t_hours = dt.hour + dt.minute / 60.0
+    phase = np.sin(2 * np.pi * t_hours / 12.4)
+    if phase >= 0:
+        speed, direction = data["vloedstroom"]
+        stroom_type = "vloed" if is_nl else "flood"
+    else:
+        speed, direction = data["ebbstroom"]
+        stroom_type = "ebb"
+
+    scaled_speed = speed * abs(phase)
+    dir_rad = np.radians(direction)
+    east  = round(scaled_speed * np.sin(dir_rad), 3)
+    north = round(scaled_speed * np.cos(dir_rad), 3)
+    card  = degrees_to_cardinal(direction, nl=is_nl)
+    src   = f"Atlas/{region} ({stroom_type})"
+    return scaled_speed, direction, card, east, north, src
+
+
+# ── Kompas SVG helper ────────────────────────────────────────────────────────
+def _build_compass_svg(dirs, selected):
+    """
+    Bouwt een compact SVG-kompas (230×230 px) met 16 windrichtingen.
+    Geselecteerde segmenten worden groen gekleurd.
+    """
+    import math
+    cx, cy, r_outer, r_inner = 115, 115, 100, 42
+    # Kleuren
+    col_sel   = "#2ca02c"
+    col_unsel = "#e8e8e8"
+    col_text  = "#333"
+    col_sel_t = "#fff"
+    col_ring  = "#aaa"
+
+    n = len(dirs)
+    angle_step = 360 / n
+    # Start bij N = -90° (omhoog in SVG)
+    svg_parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="230" height="230" '
+        f'viewBox="0 0 230 230" style="display:block;margin:auto">'
+        f'<circle cx="{cx}" cy="{cy}" r="{r_outer+4}" fill="none" '
+        f'stroke="{col_ring}" stroke-width="2"/>'
+    ]
+
+    for i, d in enumerate(dirs):
+        start_angle = -90 + i * angle_step - angle_step / 2
+        end_angle   = start_angle + angle_step
+        sa_r = math.radians(start_angle)
+        ea_r = math.radians(end_angle)
+
+        # Buitenste boogpunten
+        x1 = cx + r_outer * math.cos(sa_r)
+        y1 = cy + r_outer * math.sin(sa_r)
+        x2 = cx + r_outer * math.cos(ea_r)
+        y2 = cy + r_outer * math.sin(ea_r)
+        # Binnenste boogpunten
+        x3 = cx + r_inner * math.cos(ea_r)
+        y3 = cy + r_inner * math.sin(ea_r)
+        x4 = cx + r_inner * math.cos(sa_r)
+        y4 = cy + r_inner * math.sin(sa_r)
+
+        fill = col_sel if d in selected else col_unsel
+        svg_parts.append(
+            f'<path d="M{x1:.1f},{y1:.1f} A{r_outer},{r_outer} 0 0,1 {x2:.1f},{y2:.1f} '
+            f'L{x3:.1f},{y3:.1f} A{r_inner},{r_inner} 0 0,0 {x4:.1f},{y4:.1f} Z" '
+            f'fill="{fill}" stroke="white" stroke-width="1.5"/>'
+        )
+
+        # Label
+        mid_angle = math.radians(-90 + i * angle_step)
+        r_label = (r_outer + r_inner) / 2
+        tx = cx + r_label * math.cos(mid_angle)
+        ty = cy + r_label * math.sin(mid_angle)
+        tcol = col_sel_t if d in selected else col_text
+        # Grote labels voor hoofdrichtingen, klein voor tussenrichtingen
+        is_main = d in ("N","O","Z","W","E","S")
+        fsize = 10 if is_main else 7
+        fw = "bold" if is_main else "normal"
+        svg_parts.append(
+            f'<text x="{tx:.1f}" y="{ty:.1f}" text-anchor="middle" '
+            f'dominant-baseline="middle" font-size="{fsize}" font-weight="{fw}" '
+            f'font-family="sans-serif" fill="{tcol}">{d}</text>'
+        )
+
+    # Middenstip
+    svg_parts.append(
+        f'<circle cx="{cx}" cy="{cy}" r="8" fill="#555"/>'
+        f'<circle cx="{cx}" cy="{cy}" r="3" fill="white"/>'
+        f'</svg>'
+    )
+    return "".join(svg_parts)
+
+
+# ── Sidebar navigatie ────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(f"### {t['nav_header']}")
-    nav_options = [t["m1"], t["m2"], t["m3"], t["m4"], t["m5"], t["m6"]]
-    app_mode = st.radio(
-        label="nav",
-        options=nav_options,
-        label_visibility="collapsed",
-        key="nav_radio"
-    )
+    nav_options = [t["m1"], t["m2"], t["m3"], t["m3b"], t["m4"], t["m5"], t["m6"]]
+    app_mode = st.radio("nav", nav_options, label_visibility="collapsed", key="nav_radio")
 
     st.markdown("---")
     unit_wind = st.selectbox(t["wind_unit"], ["Knopen (kt)", "Beaufort (Bft)", "m/s", "km/h"])
 
+    # ── Zeilfilters + windrichtingsvoorkeur in één form (volgorde gegarandeerd)
+    st.markdown("---")
+
+    compass_dirs_nl = ["N","NNO","NO","ONO","O","OZO","ZO","ZZO",
+                       "Z","ZZW","ZW","WZW","W","WNW","NW","NNW"]
+    compass_dirs_en = ["N","NNE","NE","ENE","E","ESE","SE","SSE",
+                       "S","SSW","SW","WSW","W","WNW","NW","NNW"]
+    compass_dirs = compass_dirs_nl if is_nl else compass_dirs_en
+
+    # Herstel opgeslagen indices → taalswitch behoudt selectie
+    saved_indices = st.session_state.get("wind_dirs_indices", [])
+    selected_dirs = [compass_dirs[i] for i in saved_indices if i < len(compass_dirs)]
+
     with st.form(key="zeil_filters_form"):
         st.subheader(t["filters_sub"])
-        min_wind_kt, max_wind_kt = st.slider(t["w_speed"], 0, 40, (10, 22), 1)
-        max_gust_kt = st.slider(t["w_gust"], 10, 50, 28, 1)
-        max_wave_m = st.slider(t["w_wave"], 0.5, 5.0, 1.8, 0.1)
-        applied = st.form_submit_button(t["apply"], use_container_width=True)
+        min_wind_kt, max_wind_kt = st.slider(t["w_speed"], 0, 40, (9, 17), 1)
+        max_gust_kt  = st.slider(t["w_gust"], 10, 50, 20, 1)
+        max_wave_m   = st.slider(t["w_wave"], 0.5, 5.0, 1.5, 0.1)
+
+        # Kompas en windrichting-multiselect direct bóven Toepassen
+        st.markdown("---")
+        wind_pref_label = "🧭 Voorkeur windrichting (van)" if is_nl else "🧭 Preferred wind direction (from)"
+        wind_pref_hint  = ("Kies richtingen van waaruit de wind mag komen. "
+                           "Laat leeg = alle richtingen toegestaan."
+                           if is_nl else
+                           "Select directions the wind should come from. "
+                           "Leave empty = all directions allowed.")
+        st.markdown(f"**{wind_pref_label}**")
+        st.caption(wind_pref_hint)
+
+        # SVG kompas (puur visueel, buiten form-interactie)
+        compass_svg = _build_compass_svg(compass_dirs, selected_dirs)
+        st.markdown(compass_svg, unsafe_allow_html=True)
+
+        sel_label = "Selecteer richtingen" if is_nl else "Select directions"
+        preferred_dirs_form = st.multiselect(
+            sel_label,
+            options=compass_dirs,
+            default=selected_dirs,
+            key="wind_dirs_form",
+        )
+
+        st.form_submit_button(t["apply"], use_container_width=True)
+
+    # preferred_dirs_form is only set after first form interaction;
+    # fall back to selected_dirs (from session_state) on first render.
+    preferred_dirs = st.session_state.get("wind_dirs_form", selected_dirs)
+    st.session_state["wind_dirs_indices"] = [
+        compass_dirs.index(d) for d in preferred_dirs if d in compass_dirs
+    ]
 
     st.markdown("---")
     st.markdown(
-        "<small>⚠️ **Disclaimer:** Uitsluitend ter ondersteuning van passageplanning. "
-        "Geen vervanging voor officiële kaarten of getijdentabellen.</small>",
+        "<small>⚠️ <b>Disclaimer:</b> Uitsluitend ter ondersteuning van "
+        "passageplanning. Geen vervanging voor officiële kaarten of "
+        "getijdentabellen.</small>",
         unsafe_allow_html=True
     )
 
-# FIX 1: is_nl als parameter meegeven aan gecachte functies zodat
-# de cache-key de taalinstelling bevat (was: globale variabele buiten cache-scope)
+# ── Gedeelde API-functies ────────────────────────────────────────────────────
 @st.cache_data
 def search_locations(query, country_code=None, language="nl"):
-    url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=20&language={language}&format=json"
+    url = (f"https://geocoding-api.open-meteo.com/v1/search"
+           f"?name={query}&count=20&language={language}&format=json")
     try:
         res = requests.get(url, timeout=10).json()
         if "results" in res:
             results = res["results"]
             if country_code:
-                results = [loc for loc in results if loc.get("country_code", "").upper() == country_code.upper()]
+                results = [r for r in results
+                           if r.get("country_code","").upper() == country_code.upper()]
             return results
     except Exception:
         pass
     return []
 
-# FIX 2: try/except toegevoegd op beide API-calls in fetch_combined_history
 @st.cache_data
 def fetch_combined_history(lat, lon, start_str, end_str):
     df_w = pd.DataFrame()
     df_m = pd.DataFrame()
-
     try:
-        weather_url = "https://archive-api.open-meteo.com/v1/archive"
-        weather_params = {
+        r = requests.get("https://archive-api.open-meteo.com/v1/archive", params={
             "latitude": lat, "longitude": lon,
             "start_date": start_str, "end_date": end_str,
-            "hourly": ["wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "temperature_2m", "precipitation"],
+            "hourly": ["wind_speed_10m","wind_gusts_10m","wind_direction_10m",
+                       "temperature_2m","precipitation"],
             "wind_speed_unit": "kn", "timezone": "auto"
-        }
-        res_w = requests.get(weather_url, params=weather_params, timeout=15).json()
-        df_w = pd.DataFrame(res_w.get("hourly", {}))
+        }, timeout=15).json()
+        df_w = pd.DataFrame(r.get("hourly", {}))
     except Exception as e:
         st.warning(f"Weerdata ophalen mislukt: {e}")
-
     try:
-        marine_url = "https://marine-api.open-meteo.com/v1/marine"
-        marine_params = {
+        r = requests.get("https://marine-api.open-meteo.com/v1/marine", params={
             "latitude": lat, "longitude": lon,
             "start_date": start_str, "end_date": end_str,
-            "hourly": ["wave_height", "wave_period"], "timezone": "auto"
-        }
-        res_m = requests.get(marine_url, params=marine_params, timeout=15).json()
-        df_m = pd.DataFrame(res_m.get("hourly", {}))
+            "hourly": ["wave_height","wave_period"], "timezone": "auto"
+        }, timeout=15).json()
+        df_m = pd.DataFrame(r.get("hourly", {}))
     except Exception:
-        pass  # Mariene data is optioneel; app werkt ook zonder
-
+        pass
     if df_w.empty:
         return pd.DataFrame()
-
     df = df_w.copy()
-    df["time"] = pd.to_datetime(df["time"])
-    df["wave_height"] = df_m["wave_height"].fillna(0) if not df_m.empty and "wave_height" in df_m else 0.0
-    df["wave_period"] = df_m["wave_period"].fillna(0) if not df_m.empty and "wave_period" in df_m else 0.0
-    df["precipitation"] = df_w["precipitation"].fillna(0) if "precipitation" in df_w else 0.0
-    df["cardinal"] = df["wind_direction_10m"].apply(degrees_to_cardinal)
+    df["time"]         = pd.to_datetime(df["time"])
+    df["wave_height"]  = df_m["wave_height"].fillna(0)  if not df_m.empty and "wave_height"  in df_m else 0.0
+    df["wave_period"]  = df_m["wave_period"].fillna(0)  if not df_m.empty and "wave_period"  in df_m else 0.0
+    df["precipitation"]= df_w["precipitation"].fillna(0) if "precipitation" in df_w else 0.0
     return df
 
-# FIX 2: try/except ook toegevoegd in fetch_forecast_and_tides
 @st.cache_data
 def fetch_forecast_and_tides(lat, lon):
     df_w = pd.DataFrame()
     df_m = pd.DataFrame()
-
     try:
-        weather_url = "https://api.open-meteo.com/v1/forecast"
-        weather_params = {
-            "latitude": lat, "longitude": lon,
-            "forecast_days": 14,
-            "hourly": ["wind_speed_10m", "wind_gusts_10m", "wind_direction_10m", "temperature_2m", "precipitation"],
+        r = requests.get("https://api.open-meteo.com/v1/forecast", params={
+            "latitude": lat, "longitude": lon, "forecast_days": 14,
+            "hourly": ["wind_speed_10m","wind_gusts_10m","wind_direction_10m",
+                       "temperature_2m","precipitation"],
             "wind_speed_unit": "kn", "timezone": "auto"
-        }
-        res_w = requests.get(weather_url, params=weather_params, timeout=15).json()
-        df_w = pd.DataFrame(res_w.get("hourly", {}))
+        }, timeout=15).json()
+        df_w = pd.DataFrame(r.get("hourly", {}))
     except Exception as e:
         st.warning(f"Verwachtingsdata ophalen mislukt: {e}")
-
     try:
-        marine_url = "https://marine-api.open-meteo.com/v1/marine"
-        marine_params = {
-            "latitude": lat, "longitude": lon,
-            "forecast_days": 14,
-            "hourly": ["wave_height", "ocean_current_velocity", "ocean_current_direction", "sea_level_height_msl"],
+        r = requests.get("https://marine-api.open-meteo.com/v1/marine", params={
+            "latitude": lat, "longitude": lon, "forecast_days": 14,
+            "hourly": ["wave_height","ocean_current_velocity",
+                       "ocean_current_direction","sea_level_height_msl"],
             "timezone": "auto"
-        }
-        res_m = requests.get(marine_url, params=marine_params, timeout=15).json()
-        df_m = pd.DataFrame(res_m.get("hourly", {}))
+        }, timeout=15).json()
+        df_m = pd.DataFrame(r.get("hourly", {}))
+    except Exception:
+        pass
+    if df_w.empty:
+        return pd.DataFrame()
+    df = df_w.copy()
+    df["time"] = pd.to_datetime(df["time"])
+    # FIX: alles via to_numeric + fillna zodat np.radians nooit None krijgt
+    if not df_m.empty and "wave_height" in df_m:
+        df["wave_height"] = pd.to_numeric(df_m["wave_height"], errors="coerce").fillna(0)
+    else:
+        df["wave_height"] = 0.0
+    if not df_m.empty and "ocean_current_velocity" in df_m:
+        df["ocean_current_velocity"] = pd.to_numeric(df_m["ocean_current_velocity"], errors="coerce").fillna(0)
+    else:
+        df["ocean_current_velocity"] = 0.0
+    if not df_m.empty and "ocean_current_direction" in df_m:
+        df["ocean_current_direction"] = pd.to_numeric(df_m["ocean_current_direction"], errors="coerce").fillna(0)
+    else:
+        df["ocean_current_direction"] = 0.0
+    dir_rad = np.radians(df["ocean_current_direction"].astype(float))
+    df["current_east_ms"]  = (df["ocean_current_velocity"].astype(float) * np.sin(dir_rad)).round(2)
+    df["current_north_ms"] = (df["ocean_current_velocity"].astype(float) * np.cos(dir_rad)).round(2)
+    if not df_m.empty and "sea_level_height_msl" in df_m:
+        df["tide_dm"] = pd.to_numeric(df_m["sea_level_height_msl"], errors="coerce").fillna(0) * 10.0
+    else:
+        df["tide_dm"] = 0.0
+    return df
+
+@st.cache_data
+def fetch_weather_grid(lat, lon):
+    """Haal uurlijkse wind + stroom op voor één gridpunt (7 dagen)."""
+    df_w = pd.DataFrame()
+    df_m = pd.DataFrame()
+    try:
+        r = requests.get("https://api.open-meteo.com/v1/forecast", params={
+            "latitude": lat, "longitude": lon, "forecast_days": 7,
+            "hourly": ["wind_speed_10m", "wind_direction_10m"],
+            "wind_speed_unit": "kn", "timezone": "UTC"
+        }, timeout=10).json()
+        df_w = pd.DataFrame(r.get("hourly", {}))
+        if not df_w.empty:
+            df_w["time"] = pd.to_datetime(df_w["time"])
+    except Exception:
+        pass
+    try:
+        r = requests.get("https://marine-api.open-meteo.com/v1/marine", params={
+            "latitude": lat, "longitude": lon, "forecast_days": 7,
+            "hourly": ["ocean_current_velocity", "ocean_current_direction"],
+            "timezone": "UTC"
+        }, timeout=10).json()
+        df_m = pd.DataFrame(r.get("hourly", {}))
+        if not df_m.empty:
+            df_m["time"] = pd.to_datetime(df_m["time"])
     except Exception:
         pass
 
@@ -202,68 +727,343 @@ def fetch_forecast_and_tides(lat, lon):
         return pd.DataFrame()
 
     df = df_w.copy()
-    df["time"] = pd.to_datetime(df["time"])
-    df["wave_height"] = df_m.get("wave_height", pd.Series(0)).fillna(0) if not df_m.empty and "wave_height" in df_m else 0.0
-    df["ocean_current_velocity"] = df_m.get("ocean_current_velocity", pd.Series(0, index=df.index)) if not df_m.empty and "ocean_current_velocity" in df_m else 0.0
-    df["ocean_current_direction"] = df_m.get("ocean_current_direction", pd.Series(0, index=df.index)) if not df_m.empty and "ocean_current_direction" in df_m else 0.0
-
-    df["current_cardinal"] = df["ocean_current_direction"].apply(degrees_to_cardinal)
-
-    dir_rad = np.radians(df["ocean_current_direction"])
-    df["current_east_ms"] = (df["ocean_current_velocity"] * np.sin(dir_rad)).round(2)
-    df["current_north_ms"] = (df["ocean_current_velocity"] * np.cos(dir_rad)).round(2)
-
-    if not df_m.empty and "sea_level_height_msl" in df_m:
-        df["tide_dm"] = df_m["sea_level_height_msl"] * 10.0
+    if not df_m.empty and "ocean_current_velocity" in df_m:
+        df["cur_v"]   = pd.to_numeric(df_m["ocean_current_velocity"],   errors="coerce").fillna(0).values
+        df["cur_dir"] = pd.to_numeric(df_m["ocean_current_direction"],  errors="coerce").fillna(0).values
     else:
-        df["tide_dm"] = 0.0
+        # Atlas fallback per rij
+        df["cur_v"]   = 0.0
+        df["cur_dir"] = 0.0
+        for idx, row in df.iterrows():
+            spd, direction, *_ = get_atlas_current(lat, lon, row["time"].to_pydatetime())
+            df.at[idx, "cur_v"]   = spd
+            df.at[idx, "cur_dir"] = direction
 
-    df["cardinal"] = df["wind_direction_10m"].apply(degrees_to_cardinal)
+    df["wind_speed_10m"]    = pd.to_numeric(df["wind_speed_10m"],    errors="coerce").fillna(0)
+    df["wind_direction_10m"]= pd.to_numeric(df["wind_direction_10m"],errors="coerce").fillna(0)
     return df
+
+
+def get_weather_at(grid_cache, lat, lon, dt):
+    """
+    Geeft (wind_kt, wind_dir_deg, cur_v_ms, cur_dir_deg) voor (lat,lon) op tijdstip dt.
+    grid_cache: dict van (lat,lon) -> DataFrame; wordt ter plekke gevuld.
+    """
+    key = (round(lat, 2), round(lon, 2))
+    if key not in grid_cache:
+        grid_cache[key] = fetch_weather_grid(key[0], key[1])
+    df = grid_cache[key]
+    if df.empty:
+        spd, direction, *_ = get_atlas_current(lat, lon, dt)
+        return 10.0, 0.0, spd, direction
+    diff = (df["time"] - pd.Timestamp(dt, tz="UTC" if dt.tzinfo else None)).abs()
+    row  = df.loc[diff.idxmin()]
+    return (float(row["wind_speed_10m"]), float(row["wind_direction_10m"]),
+            float(row["cur_v"]),           float(row["cur_dir"]))
+
+
+def vmg_boat_speed(twa_deg, wind_kt, boat_speed_kt):
+    """
+    Vereenvoudigd polairdiagram:
+    - Optimale hoek voor kruisen: ~42° TWA → VMG ~80% van bootsnelheid
+    - Ruimschoots (90-150°): VMG ≈ bootsnelheid
+    - Voor de wind (>150°): VMG ≈ 85% van bootsnelheid
+    - Te scherp (<30°) of pal voor de wind: niet mogelijk / inefficiënt
+    Geeft effectieve snelheid door het water (kt).
+    """
+    twa = abs(twa_deg) % 360
+    if twa > 180:
+        twa = 360 - twa
+    if twa < 25:
+        return 0.1  # te scherp, bijna stilliggen
+    elif twa < 45:
+        factor = 0.60 + 0.40 * (twa - 25) / 20
+    elif twa < 80:
+        factor = 0.85 + 0.15 * (twa - 45) / 35
+    elif twa < 130:
+        factor = 1.00
+    elif twa < 160:
+        factor = 0.92
+    else:
+        factor = 0.82
+    # Wind vertraagt bij lage en hoge windsterkte
+    wind_factor = min(1.0, wind_kt / 12) if wind_kt < 12 else (1.0 if wind_kt < 25 else max(0.5, 1.0 - (wind_kt - 25) * 0.02))
+    return boat_speed_kt * factor * wind_factor
+
+
+def route_window_score(la, loa, lb, lob, dep_dt, boat_spd_kt,
+                       min_wind=9, max_wind=17, max_gust=20, max_wave=1.5,
+                       preferred_dirs=None):
+    """
+    Proxy-score (0-100) voor een vertrekmoment op deze route.
+    Gebruikt de SeaRoute-waypoints als samplepunten en beoordeelt
+    per punt of de weersomstandigheden voldoen aan de zeilfilters.
+    Score = gewogen gemiddelde van individuele conditie-scores (0-1 per conditie)
+    zodat het resultaat vloeiend is in plaats van binair.
+    """
+    try:
+        route   = sr.searoute([loa, la], [lob, lb], units="naut")
+        dist_nm = route.properties["length"]
+        coords  = [[c[1], c[0]] for c in route.geometry["coordinates"]]
+    except Exception:
+        return 50.0   # onbekend → neutraal
+
+    travel_hrs = dist_nm / max(boat_spd_kt, 1.0)
+    # Sample elke ~2 uur langs de route, minimaal 8, maximaal 24 punten
+    n_samples  = max(8, min(24, int(travel_hrs / 2)))
+    step       = max(1, len(coords) // n_samples)
+    sample_pts = coords[::step][:n_samples]
+    if len(sample_pts) < 2:
+        sample_pts = coords[:2] if len(coords) >= 2 else coords
+
+    grid_cache = {}
+    score_sum  = 0.0
+    total      = 0
+
+    for i, (slat, slon) in enumerate(sample_pts):
+        frac    = i / max(len(sample_pts) - 1, 1)
+        t_at_pt = dep_dt + timedelta(hours=frac * travel_hrs)
+
+        # Wind ophalen — fallback naar atlas-waarden
+        try:
+            w_kt, w_dir, _, _ = get_weather_at(grid_cache, slat, slon, t_at_pt)
+            if w_kt == 0 and w_dir == 0:
+                raise ValueError("zero data")
+        except Exception:
+            w_kt  = (min_wind + max_wind) / 2   # neutraal midden
+            w_dir = 180.0
+
+        # Golfhoogte: probeer grid, anders atlas
+        wave = max_wave * 0.6   # default: 60% van max → geen extreme uitsluiting
+        try:
+            key  = (round(slat, 2), round(slon, 2))
+            df_g = grid_cache.get(key, pd.DataFrame())
+            if not df_g.empty and "wave_height" in df_g.columns:
+                diff = (df_g["time"] - pd.Timestamp(t_at_pt)).abs()
+                val  = float(df_g.loc[diff.idxmin(), "wave_height"])
+                if val > 0:
+                    wave = val
+            else:
+                wave = WAVE_ATLAS.get(get_atlas_region(slat, slon), max_wave * 0.7)
+        except Exception:
+            pass
+
+        gust_est = w_kt * 1.28   # gemiddelde stootfactor open zee
+
+        # Vloeiende score per conditie (0.0-1.0) in plaats van binair
+        # Wind te weinig
+        if w_kt < min_wind:
+            wind_score = max(0.0, w_kt / max(min_wind, 1))
+        # Wind ideaal
+        elif w_kt <= max_wind:
+            wind_score = 1.0
+        # Wind te hard — afnemend tot 0 bij 1.5× max_wind
+        else:
+            wind_score = max(0.0, 1.0 - (w_kt - max_wind) / max(max_wind * 0.5, 1))
+
+        # Stoot: 1.0 onder max, aflopend
+        gust_score = max(0.0, 1.0 - max(0, gust_est - max_gust) / max(max_gust * 0.3, 1))
+
+        # Golf: 1.0 onder max, aflopend
+        wave_score = max(0.0, 1.0 - max(0, wave - max_wave) / max(max_wave * 0.5, 1))
+
+        # Windrichting
+        if preferred_dirs:
+            card    = degrees_to_cardinal(w_dir, nl=True)
+            card_en = degrees_to_cardinal(w_dir, nl=False)
+            dir_score = 1.0 if (card in preferred_dirs or card_en in preferred_dirs) else 0.3
+        else:
+            dir_score = 1.0
+
+        # Gecombineerde score: geometrisch gemiddelde (streng maar niet binair)
+        combined = (wind_score * gust_score * wave_score * dir_score) ** 0.5
+        score_sum += combined
+        total     += 1
+
+    return round((score_sum / total) * 100, 1) if total > 0 else 50.0
+
+
+def build_searoute_corridor(la, loa, lb, lob, via=None, width_nm=35.0):
+    """
+    Bouwt een set van bevaarbare grid-cellen op basis van de SeaRoute-knooppunten.
+    Elke cel is een (lat_rounded, lon_rounded) tuple op 0.25° resolutie.
+    Punten binnen width_nm zeemijlen van de route worden als 'bevaarbaar' gemarkeerd.
+    Geeft (corridor_set, route_pts_raw) terug.
+    """
+    import math as _m
+    try:
+        if via:
+            leg1 = sr.searoute([loa, la], [via[1], via[0]], units="naut")
+            leg2 = sr.searoute([via[1], via[0]], [lob, lb], units="naut")
+            coords = leg1.geometry["coordinates"] + leg2.geometry["coordinates"][1:]
+        else:
+            route = sr.searoute([loa, la], [lob, lb], units="naut")
+            coords = route.geometry["coordinates"]
+    except Exception as e:
+        return set(), []
+
+    route_pts = [[c[1], c[0]] for c in coords]   # [lat, lon]
+
+    # Bouw corridor: voor elk routepunt alle gridcellen binnen width_nm
+    corridor = set()
+    GRID = 0.25   # grids van 0.25° (~15 NM)
+    cells_per_nm = 1.0 / (GRID * 60)   # cellen per NM (ruw)
+    radius_cells = int(_m.ceil(width_nm * cells_per_nm)) + 1
+
+    for rlat, rlon in route_pts:
+        lat_c = round(rlat / GRID) * GRID
+        lon_c = round(rlon / GRID) * GRID
+        for dlat in range(-radius_cells, radius_cells + 1):
+            for dlon in range(-radius_cells, radius_cells + 1):
+                clat = lat_c + dlat * GRID
+                clon = lon_c + dlon * GRID
+                # Afstand van gridcel-centrum tot routepunt
+                dist = haversine(rlat, rlon, clat, clon)
+                if dist <= width_nm:
+                    corridor.add((round(clat / GRID), round(clon / GRID)))
+
+    return corridor, route_pts
+
+
+def point_in_corridor(lat, lon, corridor, grid=0.25):
+    """Controleer of een punt binnen de SeaRoute-corridor valt."""
+    key = (round(lat / grid), round(lon / grid))
+    return key in corridor
+
+
+def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
+                     max_days=7, dt_hours=1.0, beam_width=60,
+                     corridor=None, progress_cb=None):
+    """
+    Hybride isochrone-router (Optie A):
+    - SeaRoute-corridor definieert het bevaarbare gebied
+    - Binnen de corridor wordt per stap de meest gunstige koers gekozen
+      op basis van VMG + stroomcomponent
+    - Staat bijgehouden als (dist_to_goal, lat, lon, t_now, waypoints_list)
+      zodat het volledige pad bewaard blijft over alle stappen heen
+    """
+    import math
+
+    DIRECTIONS = 36
+    MAX_STEPS  = int(max_days * 24 / dt_hours)
+    ARRIVE_NM  = 5.0
+    GRID       = 0.25
+
+    grid_cache = {}
+
+    # Beam: lijst van (dist_to_goal, lat, lon, t_now, waypoints)
+    # waypoints = lijst van (lat, lon, t, w_kt, w_dir, sog)
+    init_wp = (la, loa, dep_dt, 0.0, 0.0, 0.0)
+    beam = [(haversine(la, loa, lb, lob), la, loa, dep_dt, [init_wp])]
+
+    for step in range(MAX_STEPS):
+        if progress_cb:
+            progress_cb(step / MAX_STEPS)
+
+        new_beam = []
+        arrived_path = None
+
+        for dist_goal, lat, lon, t_now, waypoints in beam:
+            # Aankomstcheck aan begin van stap
+            if dist_goal <= ARRIVE_NM:
+                final_wp = (lb, lob, t_now, 0.0, 0.0, 0.0)
+                arrived_path = waypoints + [final_wp]
+                break
+
+            w_kt, w_dir, cur_v, cur_dir = get_weather_at(grid_cache, lat, lon, t_now)
+
+            for d_idx in range(DIRECTIONS):
+                hdg = d_idx * (360 / DIRECTIONS)
+
+                twa       = (hdg - w_dir + 180) % 360 - 180
+                spd_water = vmg_boat_speed(twa, w_kt, boat_spd_kt)
+
+                cur_hdg_diff = math.radians(hdg - cur_dir)
+                cur_kt       = cur_v * math.cos(cur_hdg_diff)
+                spd_sog      = max(0.05, spd_water + cur_kt)
+
+                dist_step = spd_sog * dt_hours
+                hdg_r     = math.radians(hdg)
+                dlat      = dist_step / 60 * math.cos(hdg_r)
+                dlon      = (dist_step / 60 * math.sin(hdg_r)
+                             / max(0.01, math.cos(math.radians(lat))))
+                new_lat   = lat + dlat
+                new_lon   = lon + dlon
+
+                if corridor is not None:
+                    if not point_in_corridor(new_lat, new_lon, corridor, GRID):
+                        continue
+
+                new_dist = haversine(new_lat, new_lon, lb, lob)
+                t_new    = t_now + timedelta(hours=dt_hours)
+                new_wp   = (new_lat, new_lon, t_new, w_kt, w_dir, spd_sog)
+                new_beam.append((new_dist, new_lat, new_lon, t_new,
+                                 waypoints + [new_wp]))
+
+        if arrived_path is not None:
+            return arrived_path
+
+        if not new_beam:
+            break
+
+        new_beam.sort(key=lambda x: x[0])
+        seen, deduped = set(), []
+        for entry in new_beam:
+            dist, nlat, nlon = entry[0], entry[1], entry[2]
+            grid_key = (round(nlat / 0.3), round(nlon / 0.3))
+            if grid_key not in seen:
+                seen.add(grid_key)
+                deduped.append(entry)
+            if len(deduped) >= beam_width:
+                break
+        beam = deduped
+
+    # Max steps bereikt — geef het beste (dichtstbijzijnde) pad terug
+    if beam:
+        return beam[0][4]
+    return []
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 3440.065
     phi1, phi2 = np.radians(lat1), np.radians(lat2)
-    dphi = np.radians(lat2 - lat1)
-    dlambda = np.radians(lon2 - lon1)
-    a = np.sin(dphi/2)**2 + np.cos(phi1)*np.cos(phi2)*np.sin(dlambda/2)**2
+    a = (np.sin((phi2-phi1)/2)**2
+         + np.cos(phi1)*np.cos(phi2)*np.sin(np.radians(lon2-lon1)/2)**2)
     return 2 * R * np.arcsin(np.sqrt(a))
 
-def apply_sailing_filters(df, min_wind, max_wind, max_gust, max_wave):
-    if df.empty:
-        return df
-    df["is_ideal"] = (
-        (df["wind_speed_10m"] >= min_wind) &
-        (df["wind_speed_10m"] <= max_wind) &
-        (df["wind_gusts_10m"] <= max_gust) &
-        (df["wave_height"] <= max_wave)
-    )
+def apply_sailing_filters(df, mn, mx, mg, mw, preferred_dirs=None):
+    """
+    Filtert op windsnelheid, stoten en golfhoogte.
+    Als preferred_dirs opgegeven is (lijst van kardinaalrichtingen),
+    wordt is_ideal ook gefilterd op die windrichtingen.
+    """
+    if df.empty: return df
+    mask = ((df["wind_speed_10m"] >= mn) & (df["wind_speed_10m"] <= mx)
+            & (df["wind_gusts_10m"] <= mg) & (df["wave_height"] <= mw))
+    if preferred_dirs:
+        dir_mask = df["wind_direction_10m"].apply(
+            lambda d: degrees_to_cardinal(d, nl=True) in preferred_dirs
+                      or degrees_to_cardinal(d, nl=False) in preferred_dirs
+        )
+        mask = mask & dir_mask
+    df["is_ideal"] = mask
     return df
 
-def convert_units(df, unit_wind):
-    if unit_wind == "Beaufort (Bft)":
-        def knots_to_bft(k):
-            if pd.isna(k) or k < 1: return 0
-            elif k <= 3: return 1
-            elif k <= 6: return 2
-            elif k <= 10: return 3
-            elif k <= 16: return 4
-            elif k <= 21: return 5
-            elif k <= 27: return 6
-            elif k <= 33: return 7
-            elif k <= 40: return 8
-            elif k <= 47: return 9
-            elif k <= 55: return 10
-            elif k <= 63: return 11
-            else: return 12
-        df["wind_display"] = df["wind_speed_10m"].apply(knots_to_bft)
-        df["gust_display"] = df["wind_gusts_10m"].apply(knots_to_bft)
+def convert_units(df, unit):
+    if unit == "Beaufort (Bft)":
+        bft = [0,1,3,6,10,16,21,27,33,40,47,55,63]
+        def k2b(k):
+            if pd.isna(k): return 0
+            for i,v in enumerate(bft):
+                if k <= v: return i
+            return 12
+        df["wind_display"] = df["wind_speed_10m"].apply(k2b)
+        df["gust_display"] = df["wind_gusts_10m"].apply(k2b)
         return df, "Bft"
-    elif unit_wind == "m/s":
+    elif unit == "m/s":
         df["wind_display"] = df["wind_speed_10m"] * 0.514444
         df["gust_display"] = df["wind_gusts_10m"] * 0.514444
         return df, "m/s"
-    elif unit_wind == "km/h":
+    elif unit == "km/h":
         df["wind_display"] = df["wind_speed_10m"] * 1.852
         df["gust_display"] = df["wind_gusts_10m"] * 1.852
         return df, "km/h"
@@ -273,592 +1073,1735 @@ def convert_units(df, unit_wind):
         return df, "kt"
 
 def get_dominant_wind_dir(series):
-    valid_series = series[series != "-"]
-    if valid_series.empty:
-        return "-"
-    mode_val = valid_series.mode()
-    return mode_val[0] if not mode_val.empty else valid_series.iloc[0]
+    v = series[series != "-"]
+    if v.empty: return "-"
+    m = v.mode()
+    return m[0] if not m.empty else v.iloc[0]
 
 country_mapping = {
     t["all_countries"]: None,
     "Verenigd Koninkrijk (GB)" if is_nl else "United Kingdom (GB)": "GB",
-    "Nederland (NL)" if is_nl else "Netherlands (NL)": "NL",
-    "Duitsland (DE)" if is_nl else "Germany (DE)": "DE",
-    "Denemarken (DK)" if is_nl else "Denmark (DK)": "DK",
-    "Frankrijk (FR)" if is_nl else "France (FR)": "FR",
-    "Noorwegen (NO)" if is_nl else "Norway (NO)": "NO",
-    "Zweden (SE)" if is_nl else "Sweden (SE)": "SE"
+    "Nederland (NL)"           if is_nl else "Netherlands (NL)":    "NL",
+    "Duitsland (DE)"           if is_nl else "Germany (DE)":        "DE",
+    "Denemarken (DK)"          if is_nl else "Denmark (DK)":        "DK",
+    "Frankrijk (FR)"           if is_nl else "France (FR)":         "FR",
+    "Noorwegen (NO)"           if is_nl else "Norway (NO)":         "NO",
+    "Zweden (SE)"              if is_nl else "Sweden (SE)":         "SE",
 }
+_lang = "nl" if is_nl else "en"
 
-# FIX 1: taal als parameter meegeven aan search_locations (language="nl"/"en")
-_lang_code = "nl" if is_nl else "en"
+# ── GEDEELDE LOCATIE-STATE ───────────────────────────────────────────────────
+# Locatie wordt gedeeld via session_state["shared_location"].
+# Schrijven gebeurt alleen als de locatie daadwerkelijk verandert t.o.v. de
+# vorige opgeslagen waarde — zo wordt de locatie van pagina A niet overschreven
+# door de default-waarde van pagina B bij de eerste render.
+def _loc_widget(key_suffix, default_value="Lauwersoog", country_key_suffix=None):
+    """
+    Rendert een locatie-invoerveld dat de gedeelde locatie leest en schrijft.
+    Geeft (lat, lon, loc_name, country_code) terug, of (None,…) bij geen resultaat.
+    """
+    shared = st.session_state.get("shared_location", {})
+    default_query = shared.get("query", default_value)
 
-# ==============================================================================
-# MODUS: ENKELE LOCATIE & 12M HISTORIE
-# ==============================================================================
+    # Toon info-banner alleen als er een eerder gekozen locatie beschikbaar is
+    if shared.get("name"):
+        st.info(t["loc_shared_info"])
+
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        query = st.text_input(t["loc_input"], value=default_query, key=f"loc_{key_suffix}")
+    with c2:
+        country_label = st.selectbox(
+            t["country_filter"],
+            list(country_mapping.keys()),
+            key=f"cc_{key_suffix}"
+        )
+    country_code = country_mapping[country_label]
+    results = search_locations(query, country_code, language=_lang)
+    if not results:
+        st.error(f"{t['m1_no_loc']} '{query}'.")
+        return None, None, None, None
+
+    opts = {f"{r['name']} ({r.get('country','')}, {r.get('admin1','')})": r for r in results}
+    label = st.selectbox(t["m1_loc_select"], list(opts.keys()), key=f"sel_{key_suffix}")
+    loc = opts[label]
+
+    # Alleen opslaan als de locatie werkelijk veranderd is t.o.v. de gedeelde state.
+    # Dit voorkomt dat pagina B de locatie van pagina A overschrijft met zijn eigen default.
+    new_key = f"{loc['latitude']},{loc['longitude']}"
+    old_key = f"{shared.get('lat','')},{shared.get('lon','')}"
+    if new_key != old_key or not shared.get("name"):
+        # Sla de bevestigde locatienaam op als query — niet de zoekterm.
+        # Zo zien andere pagina's "Lowestoft" als default, niet "low".
+        st.session_state["shared_location"] = {
+            "query":   loc["name"],
+            "country": country_code,
+            "name":    loc["name"],
+            "lat":     loc["latitude"],
+            "lon":     loc["longitude"],
+        }
+    return loc["latitude"], loc["longitude"], loc["name"], country_code
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# M1 – ENKELE LOCATIE & 12M HISTORIE
+# ══════════════════════════════════════════════════════════════════════════════
 if app_mode == t["m1"]:
     st.subheader(t["m1"])
-
     with st.expander(t["why_title"], expanded=True):
-        st.write(t["why_text"])
+        st.markdown(t["why_text_nl"] if is_nl else t["why_text_en"])
 
-    c_col1, c_col2 = st.columns([2, 1])
-    with c_col1:
-        location_query = st.text_input(t["loc_input"], value="Lauwersoog")
-    with c_col2:
-        selected_country_label = st.selectbox(t["country_filter"], list(country_mapping.keys()))
-
-    country_code = country_mapping[selected_country_label]
-    # FIX 1: language param toegevoegd
-    results = search_locations(location_query, country_code, language=_lang_code)
-
-    if not results:
-        st.error(f"Geen locatie gevonden voor '{location_query}'.")
+    lat, lon, loc_name, _ = _loc_widget("m1")
+    if lat is None:
         st.stop()
 
-    loc_options = {f"{loc['name']} ({loc.get('country', '')}, {loc.get('admin1', '')})": loc for loc in results}
-    selected_label = st.selectbox("Selecteer de juiste locatie uit de resultaten", list(loc_options.keys()))
-    selected_loc = loc_options[selected_label]
-
-    lat, lon, loc_name = selected_loc['latitude'], selected_loc['longitude'], selected_loc['name']
-
-    end_date = datetime.now().date() - timedelta(days=3)
+    end_date   = datetime.now().date() - timedelta(days=3)
     start_date = end_date - timedelta(days=365)
-
-    with st.spinner(f"Historie ophalen voor {loc_name}..."):
+    with st.spinner(f"{t['m1_spinner']} {loc_name}..."):
         df = fetch_combined_history(lat, lon, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
 
     if not df.empty:
-        df = apply_sailing_filters(df, min_wind_kt, max_wind_kt, max_gust_kt, max_wave_m)
-        df, unit_label = convert_units(df, unit_wind)
-        df['month'] = df['time'].dt.strftime('%Y-%m (%b)')
+        df = apply_sailing_filters(df, min_wind_kt, max_wind_kt, max_gust_kt, max_wave_m, preferred_dirs=preferred_dirs or None)
+        df, ul = convert_units(df, unit_wind)
 
-        monthly_df = df.groupby('month').agg(pct_ideal=('is_ideal', lambda x: round(x.mean()*100, 2))).reset_index()
+        # ── Berekeningsuitleg ────────────────────────────────────────────────
+        with st.expander(("ℹ️ Hoe wordt 'Geschikt Zeilweer' berekend?"
+                          if is_nl else
+                          "ℹ️ How is 'Suitable Sailing Weather' calculated?"), expanded=False):
+            dir_txt = ", ".join(preferred_dirs) if preferred_dirs else ("Alle richtingen" if is_nl else "All directions")
+            if is_nl:
+                st.markdown(f"""
+Een uur telt als **geschikt zeilweer** als **alle** onderstaande drempelwaarden tegelijk worden gehaald:
 
-        fig_m = px.bar(
-            monthly_df, x='month', y='pct_ideal',
-            title="Geschikt Zeilweer per Maand (%)",
-            labels={'pct_ideal': 'Geschikt Zeilweer (%)', 'month': 'Maand'},
-            color='pct_ideal', color_continuous_scale='Greens',
-            text='pct_ideal'
-        )
-        fig_m.update_traces(texttemplate='%{text}%', textposition='outside')
-        st.plotly_chart(fig_m, use_container_width=True)
+| Parameter | Huidige instelling |
+|---|---|
+| Windsnelheid (min) | **{min_wind_kt} kt** |
+| Windsnelheid (max) | **{max_wind_kt} kt** |
+| Max. windstoot | **≤ {max_gust_kt} kt** |
+| Max. golfhoogte | **≤ {max_wave_m:.1f} m** |
+| Voorkeur windrichting | **{dir_txt}** |
 
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Geschikt Zeilweer", f"{df['is_ideal'].mean()*100:.2f}%")
-        col2.metric("Gem. Wind", f"{df['wind_display'].mean():.2f} {unit_label}")
-        col3.metric("Max. Stoot", f"{df['gust_display'].max():.2f} {unit_label}")
-        col4.metric("Overheersende Wind", get_dominant_wind_dir(df['cardinal']))
-        col5.metric("Totale Neerslag", f"{df['precipitation'].sum():.2f} mm")
+Het percentage geeft aan welk deel van alle uren in de periode aan al deze criteria voldoet. Pas de drempelwaarden aan via de filters in de linkerzijbalk.
+""")
+            else:
+                st.markdown(f"""
+An hour counts as **suitable sailing weather** when **all** of the following thresholds are met simultaneously:
 
-        st.markdown("#### 📋 Maandelijkse Details")
-        monthly_table = df.groupby('month').agg(
-            Geschikt_Zeilweer_Pct=('is_ideal', lambda x: round(x.mean()*100, 2)),
-            Gem_Wind=('wind_display', lambda x: round(x.mean(), 2)),
-            Max_Stoot=('gust_display', lambda x: round(x.max(), 2)),
-            Overheersende_Wind=('cardinal', get_dominant_wind_dir),
-            Totale_Neerslag_mm=('precipitation', lambda x: round(x.sum(), 2))
+| Parameter | Current setting |
+|---|---|
+| Wind speed (min) | **{min_wind_kt} kt** |
+| Wind speed (max) | **{max_wind_kt} kt** |
+| Max. wind gust | **≤ {max_gust_kt} kt** |
+| Max. wave height | **≤ {max_wave_m:.1f} m** |
+| Preferred wind direction | **{dir_txt}** |
+
+The percentage shows what share of all hours in the period meet all these criteria. Adjust thresholds via the filters in the left sidebar.
+""")
+        df["cardinal"] = df["wind_direction_10m"].apply(lambda d: degrees_to_cardinal(d, nl=is_nl))
+        df["month"] = df["time"].dt.strftime("%Y-%m (%b)")
+
+        monthly = df.groupby("month").agg(pct=("is_ideal", lambda x: round(x.mean()*100,2))).reset_index()
+        fig = px.bar(monthly, x="month", y="pct",
+                     title=t["m1_chart_title"],
+                     labels={"pct": t["m1_chart_y"], "month": t["m1_chart_x"]},
+                     color="pct", color_continuous_scale="Greens", text="pct")
+        fig.update_traces(texttemplate="%{text}%", textposition="outside")
+        fig.update_layout(xaxis_title=t["m1_chart_x"], yaxis_title=t["m1_chart_y"],
+                          coloraxis_colorbar=dict(title=t["m1_chart_y"]))
+        st.plotly_chart(fig, use_container_width=True)
+
+        c1,c2,c3,c4,c5 = st.columns(5)
+        c1.metric(t["m1_metric_ideal"], f"{df['is_ideal'].mean()*100:.2f}%")
+        c2.metric(t["m1_metric_wind"],  f"{df['wind_display'].mean():.2f} {ul}")
+        c3.metric(t["m1_metric_gust"],  f"{df['gust_display'].max():.2f} {ul}")
+        c4.metric(t["m1_metric_dir"],   get_dominant_wind_dir(df["cardinal"]))
+        c5.metric(t["m1_metric_rain"],  f"{df['precipitation'].sum():.2f} mm")
+
+        st.markdown(f"#### {t['m1_table_header']}")
+        tbl = df.groupby("month").agg(
+            pct =("is_ideal",     lambda x: round(x.mean()*100,2)),
+            wnd =("wind_display", lambda x: round(x.mean(),2)),
+            gst =("gust_display", lambda x: round(x.max(),2)),
+            dir =("cardinal",     get_dominant_wind_dir),
+            rain=("precipitation",lambda x: round(x.sum(),2))
         ).reset_index().rename(columns={
-            'month': 'Maand',
-            'Geschikt_Zeilweer_Pct': 'Geschikt Zeilweer (%)',
-            'Gem_Wind': f'Gem. Wind ({unit_label})',
-            'Max_Stoot': f'Max. Stoot ({unit_label})',
-            'Overheersende_Wind': 'Overheersende Wind',
-            'Totale_Neerslag_mm': 'Neerslag (mm)'
+            "month": t["m1_col_month"], "pct": t["m1_col_ideal"],
+            "wnd": f'{t["m1_col_wind"]} ({ul})', "gst": f'{t["m1_col_gust"]} ({ul})',
+            "dir": t["m1_col_dir"], "rain": t["m1_col_rain"],
         })
-        st.dataframe(monthly_table, use_container_width=True)
+        st.dataframe(tbl, use_container_width=True)
 
-# ==============================================================================
-# MODUS: MULTI-JAAR VERGELIJKING (10 JAAR)
-# ==============================================================================
+
+# ══════════════════════════════════════════════════════════════════════════════
+# M2 – MULTI-JAAR VERGELIJKING (10 JAAR)
+# ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == t["m2"]:
     st.subheader(t["m2"])
 
-    col_l, col_c, col_r = st.columns([2, 1, 1])
-    with col_l:
-        location_query = st.text_input(t["loc_input"], value="Lauwersoog", key="m2_loc")
-    with col_c:
-        selected_country_label = st.selectbox(t["country_filter"], list(country_mapping.keys()), key="multi_country")
+    col_l, col_r = st.columns([3, 1])
     with col_r:
-        time_groupby = st.selectbox("Groepering op X-as", ["Per Maand", "Per Week"])
+        time_groupby = st.selectbox(t["m2_groupby"], [t["m2_per_month"], t["m2_per_week"]])
 
-    country_code = country_mapping[selected_country_label]
-    # FIX 1: language param toegevoegd
-    results = search_locations(location_query, country_code, language=_lang_code)
-    if not results:
-        st.error("Geen locatie gevonden met dit landfilter.")
+    with col_l:
+        lat, lon, loc_name, _ = _loc_widget("m2")
+    if lat is None:
         st.stop()
-    loc_options = {f"{loc['name']} ({loc.get('country', '')}, {loc.get('admin1', '')})": loc for loc in results}
-    selected_label = st.selectbox("Selecteer de juiste locatie uit de zoekresultaten", list(loc_options.keys()), key="m2_sel")
-    selected_loc = loc_options[selected_label]
-    lat, lon, loc_name = selected_loc['latitude'], selected_loc['longitude'], selected_loc['name']
 
+    month_names = MONTH_NAMES_NL if is_nl else MONTH_NAMES_EN
     current_year = datetime.now().year
     years = [current_year - i for i in range(1, 11)]
     latest_year = str(years[0])
-    older_years = [str(y) for y in years[1:]]
-
-    # FIX 3: parallelle fetches via ThreadPoolExecutor (was: sequentiële loop)
-    # FIX 5: taalafhankelijke maandnamen
-    month_names = MONTH_NAMES_NL if is_nl else MONTH_NAMES_EN
+    older_years  = [str(y) for y in years[1:]]
 
     def fetch_year(yr):
-        start_yr = datetime(yr, 1, 1)
-        end_yr = datetime(yr, 12, 31)
-        df_yr = fetch_combined_history(lat, lon, start_yr.strftime("%Y-%m-%d"), end_yr.strftime("%Y-%m-%d"))
+        df_yr = fetch_combined_history(lat, lon, f"{yr}-01-01", f"{yr}-12-31")
         if not df_yr.empty:
-            df_yr['year'] = str(yr)
-            df_yr['week'] = df_yr['time'].dt.isocalendar().week
-            df_yr['month_num'] = df_yr['time'].dt.month
-            df_yr['month_name'] = df_yr['month_num'].map(month_names)
+            df_yr["year"]       = str(yr)
+            df_yr["week"]       = df_yr["time"].dt.isocalendar().week
+            df_yr["month_num"]  = df_yr["time"].dt.month
+            df_yr["month_name"] = df_yr["month_num"].map(month_names)
+            df_yr["cardinal"]   = df_yr["wind_direction_10m"].apply(lambda d: degrees_to_cardinal(d, nl=is_nl))
         return df_yr
 
-    multi_df_list = []
-    with st.spinner(f"Data verzamelen voor {loc_name} over de afgelopen 10 jaar..."):
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = {executor.submit(fetch_year, yr): yr for yr in years}
-            for future in as_completed(futures):
-                result = future.result()
-                if not result.empty:
-                    multi_df_list.append(result)
+    with st.spinner(f"{t['m2_spinner']} {loc_name} {t['m2_spinner_suffix']}"):
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            results_list = [f.result() for f in as_completed(
+                {ex.submit(fetch_year, yr): yr for yr in years})]
+    multi_list = [r for r in results_list if not r.empty]
 
-    if multi_df_list:
-        df_multi = pd.concat(multi_df_list, ignore_index=True)
-        df_multi = apply_sailing_filters(df_multi, min_wind_kt, max_wind_kt, max_gust_kt, max_wave_m)
-        df_multi, unit_label = convert_units(df_multi, unit_wind)
+    if multi_list:
+        dm = pd.concat(multi_list, ignore_index=True)
+        dm = apply_sailing_filters(dm, min_wind_kt, max_wind_kt, max_gust_kt, max_wave_m, preferred_dirs=preferred_dirs or None)
 
-        is_month_group = time_groupby == "Per Maand"
-        x_col = 'month_name' if is_month_group else 'week'
-        x_label = "Maand" if is_month_group else "Week (1-52)"
+        # ── Berekeningsuitleg ────────────────────────────────────────────────
+        with st.expander(("ℹ️ Hoe wordt 'Geschikt Zeilweer' berekend?"
+                          if is_nl else
+                          "ℹ️ How is 'Suitable Sailing Weather' calculated?"), expanded=False):
+            dir_txt = ", ".join(preferred_dirs) if preferred_dirs else ("Alle richtingen" if is_nl else "All directions")
+            if is_nl:
+                st.markdown(f"""
+Een uur telt als **geschikt zeilweer** als **alle** onderstaande drempelwaarden tegelijk worden gehaald:
 
-        grouped_df = df_multi.groupby([x_col, 'year']).agg(
-            pct_ideal=('is_ideal', lambda x: round(x.mean() * 100, 2)),
-            gem_wind=('wind_display', lambda x: round(x.mean(), 2)),
-            max_stoot=('gust_display', lambda x: round(x.max(), 2)),
-            dominant_dir=('cardinal', get_dominant_wind_dir),
-            gem_temp=('temperature_2m', lambda x: round(x.mean(), 2)),
-            tot_rain=('precipitation', lambda x: round(x.sum(), 2)),
-            gem_golf=('wave_height', lambda x: round(x.mean(), 2))
+| Parameter | Huidige instelling |
+|---|---|
+| Windsnelheid (min) | **{min_wind_kt} kt** |
+| Windsnelheid (max) | **{max_wind_kt} kt** |
+| Max. windstoot | **≤ {max_gust_kt} kt** |
+| Max. golfhoogte | **≤ {max_wave_m:.1f} m** |
+| Voorkeur windrichting | **{dir_txt}** |
+
+Het percentage toont welk aandeel van alle uren per jaar/maand/week aan al deze criteria voldoet. Aanpassen via de filters in de linkerzijbalk.
+""")
+            else:
+                st.markdown(f"""
+An hour counts as **suitable sailing weather** when **all** of the following thresholds are met simultaneously:
+
+| Parameter | Current setting |
+|---|---|
+| Wind speed (min) | **{min_wind_kt} kt** |
+| Wind speed (max) | **{max_wind_kt} kt** |
+| Max. wind gust | **≤ {max_gust_kt} kt** |
+| Max. wave height | **≤ {max_wave_m:.1f} m** |
+| Preferred wind direction | **{dir_txt}** |
+
+The percentage shows what share of all hours per year/month/week meet all these criteria. Adjust via the filters in the left sidebar.
+""")
+        dm, ul = convert_units(dm, unit_wind)
+
+        is_month = (time_groupby == t["m2_per_month"])
+        x_col   = "month_name" if is_month else "week"
+        x_label = t["m2_x_month"] if is_month else t["m2_x_week"]
+        yr_col  = t["m2_year_label"]
+        id_col  = t["m2_col_ideal"]
+
+        gdf = dm.groupby([x_col, "year"]).agg(
+            pct_ideal  =("is_ideal",      lambda x: round(x.mean()*100,2)),
+            gem_wind   =("wind_display",  lambda x: round(x.mean(),2)),
+            max_stoot  =("gust_display",  lambda x: round(x.max(),2)),
+            dom_dir    =("cardinal",      get_dominant_wind_dir),
+            gem_temp   =("temperature_2m",lambda x: round(x.mean(),2)),
+            tot_rain   =("precipitation", lambda x: round(x.sum(),2)),
+            gem_golf   =("wave_height",   lambda x: round(x.mean(),2)),
         ).reset_index().rename(columns={
-            x_col: x_label,
-            'year': 'Jaar',
-            'pct_ideal': 'Geschikt Zeilweer (%)',
-            'gem_wind': f'Gem. Wind ({unit_label})',
-            'max_stoot': f'Max. Stoot ({unit_label})',
-            'dominant_dir': 'Overheersende Wind',
-            'gem_temp': 'Gem. Temp (°C)',
-            'tot_rain': 'Neerslag (mm)',
-            'gem_golf': 'Gem. Golf (m)'
+            x_col: x_label, "year": yr_col, "pct_ideal": id_col,
+            "gem_wind":  f'{t["m2_col_wind"]} ({ul})',
+            "max_stoot": f'{t["m2_col_gust"]} ({ul})',
+            "dom_dir":   t["m2_col_dir"],  "gem_temp": t["m2_col_temp"],
+            "tot_rain":  t["m2_col_rain"], "gem_golf": t["m2_col_wave"],
         })
 
-        fig_combo = go.Figure()
-        df_latest = grouped_df[grouped_df['Jaar'] == latest_year]
-        if not df_latest.empty:
-            fig_combo.add_trace(go.Bar(
-                x=df_latest[x_label], y=df_latest['Geschikt Zeilweer (%)'],
-                name=f"{latest_year} (Meest Recent)",
-                marker_color='rgba(44, 160, 44, 0.45)', marker_line_color='#2ca02c', marker_line_width=1.5
-            ))
-
+        fig = go.Figure()
+        d_lat = gdf[gdf[yr_col] == latest_year]
+        if not d_lat.empty:
+            fig.add_trace(go.Bar(x=d_lat[x_label], y=d_lat[id_col],
+                name=f"{latest_year} ({t['m2_most_recent']})",
+                marker_color="rgba(44,160,44,0.45)",
+                marker_line_color="#2ca02c", marker_line_width=1.5))
         for yr in older_years:
-            df_yr = grouped_df[grouped_df['Jaar'] == yr]
-            if not df_yr.empty:
-                fig_combo.add_trace(go.Scatter(
-                    x=df_yr[x_label], y=df_yr['Geschikt Zeilweer (%)'],
-                    name=f"Jaar {yr}", mode='lines+markers',
-                    line=dict(width=1.8, shape='spline')
-                ))
+            d_yr = gdf[gdf[yr_col] == yr]
+            if not d_yr.empty:
+                fig.add_trace(go.Scatter(x=d_yr[x_label], y=d_yr[id_col],
+                    name=f"{t['m2_year_label']} {yr}", mode="lines+markers",
+                    line=dict(width=1.8, shape="spline")))
+        fig.update_layout(
+            title=f"{id_col}: {t['m2_most_recent']} ({latest_year}) {t['m2_chart_sfx']}",
+            xaxis_title=x_label, yaxis_title=id_col, hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(gdf, use_container_width=True)
 
-        fig_combo.update_layout(
-            title=f"Geschikt Zeilweer (%): Staven ({latest_year}) vs. Lijnen (10 Jaar Historie)",
-            xaxis_title=x_label, yaxis_title="Geschikt Zeilweer (%)", hovermode="x unified"
-        )
-        st.plotly_chart(fig_combo, use_container_width=True)
-        st.dataframe(grouped_df, use_container_width=True)
 
-# ==============================================================================
-# MODUS: OPTIMALE ROUTE & STROOMROUTING
-# ==============================================================================
+# ══════════════════════════════════════════════════════════════════════════════
+# M3 – OPTIMALE ROUTE & STROOMROUTING
+# ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == t["m3"]:
     st.subheader(t["m3"])
-    st.write("Voer havennamen in en filter eventueel per land.")
+    st.write(t["m3_intro"])
+
+    shared = st.session_state.get("shared_location", {})
+    # Gedeelde locatie is de BESTEMMING, niet het startpunt
+    default_end = shared.get("query", "Dover")
 
     with st.form(key="route_form"):
-        col_r1, col_r2, col_r3, col_r4 = st.columns(4)
-        with col_r1:
-            start_query = st.text_input("Startpunt", value="Lauwersoog")
-            start_country_label = st.selectbox("Start Landfilter", list(country_mapping.keys()), key="start_c")
-        with col_r2:
-            via_query = st.text_input("Optionele Tussenhaven", value="")
-            via_country_label = st.selectbox("Tussen Landfilter", list(country_mapping.keys()), key="via_c")
-        with col_r3:
-            end_query = st.text_input("Bestemming", value="Dover")
-            end_country_label = st.selectbox("Bestemming Landfilter", list(country_mapping.keys()), key="end_c")
-        with col_r4:
-            boat_speed_kt = st.number_input("Gem. Bootsnelheid (knopen)", min_value=2.0, max_value=15.0, value=5.0, step=0.5)
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            start_q = st.text_input(t["m3_start"], value="Lauwersoog")
+            start_cc_lbl = st.selectbox(t["m3_start_filter"], list(country_mapping.keys()), key="r_sc")
+        with c2:
+            via_q   = st.text_input(t["m3_via"], value="")
+            via_cc_lbl = st.selectbox(t["m3_via_filter"], list(country_mapping.keys()), key="r_vc")
+        with c3:
+            end_q   = st.text_input(t["m3_end"], value=default_end)
+            end_cc_lbl = st.selectbox(t["m3_end_filter"], list(country_mapping.keys()), key="r_ec")
+        with c4:
+            boat_spd = st.number_input(t["m3_speed"], min_value=2.0, max_value=15.0, value=5.0, step=0.5)
+        ct1, ct2 = st.columns(2)
+        with ct1:
+            dep_date = st.date_input(t["m3_dep_date"], value=datetime.now().date())
+        with ct2:
+            dep_time_val = st.time_input(t["m3_dep_time"], value=datetime.now().time())
+        submitted = st.form_submit_button(t["m3_search_btn"], use_container_width=True)
 
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            dep_date = st.date_input("Vertrekdatum", value=datetime.now().date())
-        with col_t2:
-            dep_time = st.time_input("Vertrektijd", value=datetime.now().time())
+    if submitted:
+        st.session_state.update({
+            "r_search_done": True, "r_start_q": start_q,
+            "r_start_cc": country_mapping[start_cc_lbl],
+            "r_via_q": via_q, "r_via_cc": country_mapping[via_cc_lbl],
+            "r_end_q": end_q, "r_end_cc": country_mapping[end_cc_lbl],
+            "r_boat_spd": boat_spd,
+            "r_dep_dt": datetime.combine(dep_date, dep_time_val),
+            "r_calc": False,
+        })
 
-        submit_search = st.form_submit_button("🔍 Zoek & Bevestig Havens", use_container_width=True)
-
-    if submit_search:
-        st.session_state["search_done"] = True
-        st.session_state["start_query"] = start_query
-        st.session_state["start_cc"] = country_mapping[start_country_label]
-        st.session_state["via_query"] = via_query
-        st.session_state["via_cc"] = country_mapping[via_country_label]
-        st.session_state["end_query"] = end_query
-        st.session_state["end_cc"] = country_mapping[end_country_label]
-        st.session_state["boat_speed_kt"] = boat_speed_kt
-        st.session_state["departure_dt"] = datetime.combine(dep_date, dep_time)
-        st.session_state["calc_route"] = False
-
-    if st.session_state.get("search_done", False):
-        # FIX 1: language param toegevoegd
-        start_results = search_locations(st.session_state["start_query"], st.session_state["start_cc"], language=_lang_code)
-        end_results = search_locations(st.session_state["end_query"], st.session_state["end_cc"], language=_lang_code)
-
-        if not start_results or not end_results:
-            st.error("Eén van de havens kon niet worden gevonden.")
-            st.stop()
+    if st.session_state.get("r_search_done"):
+        sr_res  = search_locations(st.session_state["r_start_q"], st.session_state["r_start_cc"], language=_lang)
+        end_res = search_locations(st.session_state["r_end_q"],   st.session_state["r_end_cc"],   language=_lang)
+        if not sr_res or not end_res:
+            st.error(t["m3_no_ports"]); st.stop()
 
         st.markdown("---")
-        st.markdown("#### ⚓ Bevestig de juiste havens:")
-        col_s_sel, col_e_sel = st.columns(2)
-
-        start_options = {f"{loc['name']} ({loc.get('country', '')}, {loc.get('admin1', '')})": loc for loc in start_results}
-        end_options = {f"{loc['name']} ({loc.get('country', '')}, {loc.get('admin1', '')})": loc for loc in end_results}
-
-        with col_s_sel:
-            selected_start_label = st.selectbox("Startpunt bevestigen", list(start_options.keys()))
-            chosen_start = start_options[selected_start_label]
-
-        with col_e_sel:
-            selected_end_label = st.selectbox("Bestemming bevestigen", list(end_options.keys()))
-            chosen_end = end_options[selected_end_label]
+        st.markdown(t["m3_confirm_header"])
+        cs, ce = st.columns(2)
+        s_opts = {f"{r['name']} ({r.get('country','')}, {r.get('admin1','')})": r for r in sr_res}
+        e_opts = {f"{r['name']} ({r.get('country','')}, {r.get('admin1','')})": r for r in end_res}
+        with cs:
+            chosen_start = s_opts[st.selectbox(t["m3_confirm_start"], list(s_opts.keys()))]
+        with ce:
+            chosen_end   = e_opts[st.selectbox(t["m3_confirm_end"],   list(e_opts.keys()))]
 
         chosen_via = None
-        if st.session_state["via_query"].strip() != "":
-            # FIX 1: language param toegevoegd
-            via_results = search_locations(st.session_state["via_query"], st.session_state["via_cc"], language=_lang_code)
-            if via_results:
-                via_options = {f"{loc['name']} ({loc.get('country', '')}, {loc.get('admin1', '')})": loc for loc in via_results}
-                selected_via_label = st.selectbox("Tussenhaven bevestigen", list(via_options.keys()))
-                chosen_via = via_options[selected_via_label]
+        if st.session_state["r_via_q"].strip():
+            via_res = search_locations(st.session_state["r_via_q"], st.session_state["r_via_cc"], language=_lang)
+            if via_res:
+                v_opts = {f"{r['name']} ({r.get('country','')}, {r.get('admin1','')})": r for r in via_res}
+                chosen_via = v_opts[st.selectbox(t["m3_confirm_via"], list(v_opts.keys()))]
 
-        if st.button("🚀 Start Maritieme Route Berekening", use_container_width=True):
-            st.session_state["calc_route"] = True
-            st.session_state["chosen_start"] = chosen_start
-            st.session_state["chosen_end"] = chosen_end
-            st.session_state["chosen_via"] = chosen_via
+        if st.button(t["m3_calc_btn"], use_container_width=True):
+            st.session_state.update({"r_calc": True, "r_chosen_start": chosen_start,
+                                     "r_chosen_end": chosen_end, "r_chosen_via": chosen_via})
+            # Update shared_location met de bevestigde bestemming
+            st.session_state["shared_location"] = {
+                "query":   chosen_end["name"],
+                "country": st.session_state.get("r_end_cc"),
+                "name":    chosen_end["name"],
+                "lat":     chosen_end["latitude"],
+                "lon":     chosen_end["longitude"],
+            }
+        st.caption(
+            "⏱️ Eerste berekening duurt doorgaans 45–90 seconden (100 waypoints × weersdata). "
+            "Een herberekening van dezelfde route is direct klaar door de cache."
+            if is_nl else
+            "⏱️ First calculation typically takes 45–90 seconds (100 waypoints × weather data). "
+            "Recalculating the same route is instant thanks to caching."
+        )
 
-    if st.session_state.get("calc_route", False):
-        c_start = st.session_state["chosen_start"]
-        c_end = st.session_state["chosen_end"]
-        c_via = st.session_state.get("chosen_via", None)
-        b_spd = st.session_state["boat_speed_kt"]
-        dep_dt = st.session_state["departure_dt"]
+    if st.session_state.get("r_calc"):
+        cs = st.session_state["r_chosen_start"]
+        ce = st.session_state["r_chosen_end"]
+        cv = st.session_state.get("r_chosen_via")
+        b_spd = st.session_state["r_boat_spd"]
+        dep_dt = st.session_state["r_dep_dt"]
+        la, loa, na = cs["latitude"], cs["longitude"], cs["name"]
+        lb, lob, nb = ce["latitude"], ce["longitude"], ce["name"]
 
-        lat_a, lon_a, name_a = c_start['latitude'], c_start['longitude'], c_start['name']
-        lat_b, lon_b, name_b = c_end['latitude'], c_end['longitude'], c_end['name']
-
-        lat_via, lon_via = None, None
-        if c_via:
-            lat_via, lon_via = c_via['latitude'], c_via['longitude']
-
-        with st.spinner("Maritieme route berekenen..."):
+        with st.spinner(t["m3_spinner"]):
             try:
-                if lat_via and lon_via:
-                    route_leg1 = sr.searoute([lon_a, lat_a], [lon_via, lat_via], units="naut")
-                    route_leg2 = sr.searoute([lon_via, lat_via], [lon_b, lat_b], units="naut")
-                    coords_raw = route_leg1.geometry['coordinates'] + route_leg2.geometry['coordinates'][1:]
-                    total_dist_nm = route_leg1.properties['length'] + route_leg2.properties['length']
+                if cv:
+                    lv, lov = cv["latitude"], cv["longitude"]
+                    leg1 = sr.searoute([loa,la],[lov,lv], units="naut")
+                    leg2 = sr.searoute([lov,lv],[lob,lb], units="naut")
+                    coords_raw = leg1.geometry["coordinates"] + leg2.geometry["coordinates"][1:]
+                    dist_nm = leg1.properties["length"] + leg2.properties["length"]
                 else:
-                    route_res = sr.searoute([lon_a, lat_a], [lon_b, lat_b], units="naut")
-                    coords_raw = route_res.geometry['coordinates']
-                    total_dist_nm = route_res.properties['length']
+                    route = sr.searoute([loa,la],[lob,lb], units="naut")
+                    coords_raw = route.geometry["coordinates"]
+                    dist_nm = route.properties["length"]
             except Exception as e:
-                st.error(f"Fout bij route berekening: {e}")
-                st.stop()
+                st.error(f"{t['m3_route_error']} {e}"); st.stop()
 
-            all_points_raw = [[c[1], c[0]] for c in coords_raw]
-            harbor_target = [lat_b, lon_b]
+            pts_raw = [[c[1],c[0]] for c in coords_raw]
+            TARGET_WP = 100
+            APPROACH_PTS = 8   # punten voor haven-benadering aan start én eind
 
-            target_waypoints = 45
-            all_points = []
-
-            if len(all_points_raw) > 1:
-                distances = [0.0]
-                for j in range(1, len(all_points_raw)):
-                    d = haversine(all_points_raw[j-1][0], all_points_raw[j-1][1], all_points_raw[j][0], all_points_raw[j][1])
-                    distances.append(distances[-1] + d)
-
-                total_path_dist = distances[-1]
-                if total_path_dist > 0:
-                    target_distances = np.linspace(0, total_path_dist, target_waypoints)
-                    for target_d in target_distances:
+            # ── Stap 1: gelijkmatig verdelen over de SeaRoute-knooppunten ───
+            pts_mid = []
+            if len(pts_raw) > 1:
+                dists = [0.0]
+                for j in range(1, len(pts_raw)):
+                    dists.append(dists[-1] + haversine(
+                        pts_raw[j-1][0],pts_raw[j-1][1],
+                        pts_raw[j][0],  pts_raw[j][1]))
+                total_d = dists[-1]
+                if total_d > 0:
+                    for td in np.linspace(0, total_d, TARGET_WP):
                         idx = 0
-                        while idx < len(distances) - 1 and distances[idx+1] < target_d:
+                        while idx < len(dists)-1 and dists[idx+1] < td:
                             idx += 1
-                        if idx >= len(distances) - 1:
-                            all_points.append(all_points_raw[-1])
+                        if idx >= len(dists)-1:
+                            pts_mid.append(pts_raw[-1])
                         else:
-                            d1, d2 = distances[idx], distances[idx+1]
-                            p1, p2 = np.array(all_points_raw[idx]), np.array(all_points_raw[idx+1])
-                            factor = (target_d - d1) / (d2 - d1) if d2 > d1 else 0
-                            interpolated_point = p1 + factor * (p2 - p1)
-                            all_points.append(interpolated_point.tolist())
+                            f = ((td - dists[idx]) / (dists[idx+1] - dists[idx])
+                                 if dists[idx+1] > dists[idx] else 0)
+                            pts_mid.append(
+                                (np.array(pts_raw[idx])
+                                 + f * (np.array(pts_raw[idx+1]) - np.array(pts_raw[idx]))).tolist())
                 else:
-                    all_points = all_points_raw
+                    pts_mid = pts_raw
             else:
-                all_points = all_points_raw
+                pts_mid = pts_raw
 
-            approach_distances = np.linspace(0, haversine(all_points[-1][0], all_points[-1][1], harbor_target[0], harbor_target[1]), 6)
-            for step_d in approach_distances[1:]:
-                p_prev = np.array(all_points[-1])
-                p_dest = np.array(harbor_target)
-                total_d_app = haversine(p_prev[0], p_prev[1], p_dest[0], p_dest[1])
-                factor = (step_d / total_d_app) if total_d_app > 0 else 1.0
-                intermediate_pt = p_prev + factor * (p_dest - p_prev)
-                all_points.append(intermediate_pt.tolist())
+            # ── Stap 2: spline-smoothing voor vloeiende lijn ─────────────────
+            try:
+                from scipy.interpolate import splprep, splev
+                arr = np.array(pts_mid)
+                # s=0.0005 geeft vloeiend maar blijft dicht bij de SeaRoute-punten
+                tck, u = splprep([arr[:,0], arr[:,1]], s=0.0005, k=3)
+                u_fine = np.linspace(0, 1, TARGET_WP * 4)
+                lat_s, lon_s = splev(u_fine, tck)
+                pts_smooth = [[float(la_), float(lo_)] for la_, lo_ in zip(lat_s, lon_s)]
+            except Exception:
+                # Fallback: Chaikin curve-smoothing (geen externe lib nodig)
+                def _chaikin(pts, iters=3):
+                    for _ in range(iters):
+                        new = [pts[0]]
+                        for j in range(len(pts)-1):
+                            p0, p1 = np.array(pts[j]), np.array(pts[j+1])
+                            new += [(p0*0.75+p1*0.25).tolist(),
+                                    (p0*0.25+p1*0.75).tolist()]
+                        new.append(pts[-1])
+                        pts = new
+                    return pts
+                pts_smooth = _chaikin(pts_mid)
 
-            hours_per_segment = (total_dist_nm / b_spd) / (len(all_points) - 1) if len(all_points) > 1 else 0
+            # ── Stap 3: haven-benadering start (vertrek → eerste waypoint) ───
+            start_approach = []
+            for sd in np.linspace(0, haversine(la, loa, pts_smooth[0][0], pts_smooth[0][1]),
+                                  APPROACH_PTS + 1)[:-1]:
+                p0 = np.array([la, loa])
+                p1 = np.array(pts_smooth[0])
+                d_tot = haversine(p0[0], p0[1], p1[0], p1[1])
+                f = (sd / d_tot) if d_tot > 0 else 0.0
+                start_approach.append((p0 + f * (p1 - p0)).tolist())
 
+            # ── Stap 4: haven-benadering eind (laatste waypoint → bestemming) ─
+            end_approach = []
+            for sd in np.linspace(0, haversine(pts_smooth[-1][0], pts_smooth[-1][1], lb, lob),
+                                  APPROACH_PTS + 1)[1:]:
+                p0 = np.array(pts_smooth[-1])
+                p1 = np.array([lb, lob])
+                d_tot = haversine(p0[0], p0[1], p1[0], p1[1])
+                f = (sd / d_tot) if d_tot > 0 else 1.0
+                end_approach.append((p0 + f * (p1 - p0)).tolist())
+
+            # Volledige lijst: start-benadering + open water + eind-benadering
+            pts = start_approach + pts_smooth + end_approach
+
+            hrs_seg = (dist_nm/b_spd)/(len(pts)-1) if len(pts)>1 else 0
             route_data = []
-            for i, (lt, ln) in enumerate(all_points):
-                wp_name = f"WP {i+1}" if (0 < i < len(all_points)-1) else (name_a if i == 0 else name_b)
-                arrival_time = dep_dt + timedelta(hours=i * hours_per_segment)
+            for i,(lt,ln) in enumerate(pts):
+                wp_name = f"WP {i+1}" if 0 < i < len(pts)-1 else (na if i==0 else nb)
+                arr_t   = dep_dt + timedelta(hours=i*hrs_seg)
+                df_wp   = fetch_forecast_and_tides(lt, ln)
 
-                df_wp = fetch_forecast_and_tides(lt, ln)
+                cv_v = ce_v = card_v = None
+                wind_v = wave_v = tide_v = None
+                src_v = "-"
 
-                # FIX 4: None/NaN als fallback i.p.v. misleidende dummy-waarden
-                current_v = None
-                current_d = None
-                current_card = "-"
-                current_e = None
-                wind_s = None
-                wave_h = None
-                tide_val = None
-
-                if not df_wp.empty and 'time' in df_wp.columns:
-                    df_wp['time_diff'] = (df_wp['time'] - arrival_time).abs()
-                    closest_row = df_wp.loc[df_wp['time_diff'].idxmin()]
-
-                    current_v = closest_row.get('ocean_current_velocity', None)
-                    if pd.isna(current_v): current_v = None
-                    current_d = closest_row.get('ocean_current_direction', None)
-                    if pd.isna(current_d): current_d = None
-                    current_card = closest_row.get('current_cardinal', "-")
-                    current_e = closest_row.get('current_east_ms', None)
-                    wind_s = closest_row.get('wind_speed_10m', None)
-                    wave_h = closest_row.get('wave_height', None)
-                    raw_tide = closest_row.get('tide_dm', None)
-                    tide_val = None if pd.isna(raw_tide) else raw_tide
+                if not df_wp.empty and "time" in df_wp.columns:
+                    df_wp["tdiff"] = (df_wp["time"] - arr_t).abs()
+                    row = df_wp.loc[df_wp["tdiff"].idxmin()]
+                    raw_cv = row.get("ocean_current_velocity", None)
+                    if raw_cv is not None and not pd.isna(raw_cv) and float(raw_cv) != 0.0:
+                        cv_v   = float(raw_cv)
+                        card_v = degrees_to_cardinal(row.get("ocean_current_direction", 0), nl=is_nl)
+                        ce_v   = row.get("current_east_ms", None)
+                        src_v  = ("Actuele voorspelling" if is_nl else "Current forecast")
+                    else:
+                        spd, _dir, card_v, e_c, _, src_v = get_atlas_current(lt, ln, arr_t)
+                        cv_v, ce_v = spd, e_c
+                    wind_v = row.get("wind_speed_10m", None)
+                    wave_v = row.get("wave_height", None)
+                    rt = row.get("tide_dm", None)
+                    tide_v = None if (rt is None or pd.isna(rt)) else float(rt)
 
                 route_data.append({
-                    "Waypoint": wp_name,
-                    "Latitude": round(float(lt), 4),
-                    "Longitude": round(float(ln), 4),
-                    "Tijd": arrival_time,
-                    "Getij (dm)": round(float(tide_val), 1) if tide_val is not None else "n/a",
-                    "Stroom (m/s)": round(float(current_v), 2) if current_v is not None else "n/a",
-                    "Oost/West (+/-)": round(float(current_e), 2) if current_e is not None else "n/a",
-                    "Stroomrichting": current_card,
-                    "Windsnelheid (kt)": round(float(wind_s), 1) if wind_s is not None else "n/a",
-                    "Golfhoogte (m)": round(float(wave_h), 2) if wave_h is not None else "n/a"
+                    t["m3_col_wp"]:      wp_name,
+                    t["m3_col_lat"]:     round(float(lt),4),
+                    t["m3_col_lon"]:     round(float(ln),4),
+                    t["m3_col_time"]:    arr_t,
+                    t["m3_col_tide"]:    round(tide_v,1)       if tide_v is not None else "n/a",
+                    t["m3_col_current"]: round(cv_v,2)         if cv_v  is not None else "n/a",
+                    t["m3_col_ew"]:      round(float(ce_v),2)  if ce_v  is not None else "n/a",
+                    t["m3_col_dir"]:     card_v or "-",
+                    t["m3_col_wind"]:    round(float(wind_v),1) if wind_v is not None else "n/a",
+                    t["m3_col_wave"]:    round(float(wave_v),2) if wave_v is not None else "n/a",
+                    t["m3_col_src"]:     src_v,
                 })
+            df_route = pd.DataFrame(route_data)
 
-            df_route_res = pd.DataFrame(route_data)
+        # ── Reistijd berekening ───────────────────────────────────────────────
+        total_hrs   = dist_nm / b_spd                        # uren onderweg
+        total_h     = int(total_hrs)
+        total_m     = int(round((total_hrs - total_h) * 60))
+        arr_dt      = dep_dt + timedelta(hours=total_hrs)
 
-        st.success(f"🧭 **Route Berekend:** Open water afstand is **{total_dist_nm:.1f} NM**.")
+        # Nacht-check: is er een uur tussen vertrek en aankomst dat 's nachts valt?
+        night_hours = set(range(22, 24)) | set(range(0, 6))   # 22:00-05:59
+        passage_hours = set(
+            (dep_dt + timedelta(hours=h)).hour
+            for h in range(0, int(total_hrs) + 2)
+        )
+        has_night = bool(passage_hours & night_hours)
 
-        center_lat = df_route_res['Latitude'].mean()
-        center_lon = df_route_res['Longitude'].mean()
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=6, tiles="OpenStreetMap")
+        st.success(f"{t['m3_success']} **{dist_nm:.1f} NM** — "
+                   f"{t['m3_metric_time']}: **{total_h}u {total_m:02d}m**")
 
-        split_idx = len(all_points) - 6
-        open_water_line = all_points[:split_idx+1]
-        approach_line = all_points[split_idx:]
+        # Samenvatting metrics
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric(t["m3_metric_dist"],  f"{dist_nm:.1f} NM")
+        mc2.metric(t["m3_metric_time"],  f"{total_h}u {total_m:02d}m")
+        mc3.metric(t["m3_metric_speed"], f"{b_spd:.1f} kt")
+        mc4.metric(t["m3_metric_dep"],   dep_dt.strftime("%d-%m %H:%M"))
+        mc5.metric(t["m3_metric_arr"],   arr_dt.strftime("%d-%m %H:%M"))
 
-        folium.PolyLine(open_water_line, color="darkorange", weight=4, tooltip="Open Water Route").add_to(m)
-        folium.PolyLine(approach_line, color="deepskyblue", weight=4, dash_array="5, 10", tooltip="Approximation").add_to(m)
-        folium.Marker([lat_a, lon_a], popup=f"Start: {name_a}", icon=folium.Icon(color="green", icon="play")).add_to(m)
-        folium.Marker([lat_b, lon_b], popup=f"End: {name_b}", icon=folium.Icon(color="red", icon="flag")).add_to(m)
+        if has_night:
+            st.warning(t["m3_night_warn"])
+        else:
+            st.success(t["m3_night_ok"])
 
-        components.html(m._repr_html_(), height=550)
+        # ── Routing uitleg ────────────────────────────────────────────────────
+        with st.expander(
+            ("ℹ️ Hoe wordt de route bepaald?" if is_nl else "ℹ️ How is the route calculated?"),
+            expanded=False
+        ):
+            if is_nl:
+                st.markdown("""
+De route wordt berekend met de **SeaRoute**-bibliotheek, gebaseerd op een wereldwijd
+netwerk van bevaarbare waterwegen.
 
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            gpx_content = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Sailing Weather Historian Pro">\n  <trk>\n    <n>' + name_a + ' to ' + name_b + '</n>\n    <trkseg>\n'
-            for lt, ln in all_points:
-                gpx_content += f'      <trkpt lat="{lt}" lon="{ln}"></trkpt>\n'
-            gpx_content += '    </trkseg>\n  </trk>\n</gpx>'
+> ⚠️ **Belangrijk:** de getoonde route is de **kortste bevaarbare waterweg** tussen vertrek en bestemming.
+> De route wordt **niet** geoptimaliseerd op wind, stroom of golfhoogte — die gegevens worden
+> uitsluitend *informatief* per waypoint getoond in de tabel hieronder.
+> Voor een weergestuurde routeoptimalisatie zijn gespecialiseerde tools zoals PredictWind of OpenCPN nodig.
 
-            st.download_button(
-                label="📥 Download GPX",
-                data=gpx_content,
-                file_name=f"route_{name_a}_naar_{name_b}.gpx",
-                mime="application/gpx+xml",
-                use_container_width=True
+**Wat de routering automatisch vermijdt:**
+- 🏔️ **Landmassa's** — de route gaat altijd om land heen via open water
+- 🚧 **Ontoegankelijke gebieden** — gesloten of beperkte vaargebieden uit de SeaRoute-dataset
+- ⚓ **Ondiepe kustwateren** — de routing volgt bewezen scheepvaartroutes in ondiepere gebieden
+
+**Wat je zelf moet controleren:**
+- Of de kortste route ook de meest gunstige is gezien de verwachte wind en stroom (zie tabel)
+- Actuele NOTAM's, betonning en dieptekaarten voor jouw specifieke vaartuig
+- Getijvensters voor ondiepten en sluizen op de exacte route
+- Lokale havenreglementen op het vertrek- en aankomstpunt
+
+De oranje lijn toont de vloeiende open-waterroute. De blauwe gestippelde lijnen tonen de indicatieve havennadering bij zowel het vertrekpunt als de bestemming — volg ter plaatse altijd de officiële betonning.
+""")
+            else:
+                st.markdown("""
+The route is calculated using the **SeaRoute** library, based on a global network
+of navigable waterways.
+
+> ⚠️ **Important:** the route shown is the **shortest navigable waterway** between departure and destination.
+> The route is **not** optimised for wind, current or wave height — that data is shown
+> *for information only* per waypoint in the table below.
+> For weather-optimised routing, dedicated tools such as PredictWind or OpenCPN are required.
+
+**What the routing automatically avoids:**
+- 🏔️ **Land masses** — the route always goes around land via open water
+- 🚧 **Inaccessible areas** — closed or restricted navigation zones from the SeaRoute dataset
+- ⚓ **Shallow coastal waters** — routing follows proven shipping routes in shallower areas
+
+**What you should verify yourself:**
+- Whether the shortest route is also the most favourable given expected wind and current (see table)
+- Current NOTAMs, buoyage and depth charts for your specific vessel
+- Tidal windows for shoals and locks on the exact route
+- Local port regulations at departure and destination
+
+The orange line shows the smooth open-water route. The blue dotted lines show the indicative harbour approach at both departure and destination — always follow official buoyage on the water.
+""")
+
+        cmap = folium.Map(location=[df_route[t["m3_col_lat"]].mean(),
+                                    df_route[t["m3_col_lon"]].mean()], zoom_start=6)
+        # ── Kaart: start-benadering (blauw) + open water (oranje) + eind-benadering (blauw) ──
+        n_app = len(start_approach)
+        n_end = len(end_approach)
+
+        start_pts_map  = start_approach + [pts_smooth[0]]          # blauw begin
+        open_water_map = pts_smooth                                  # oranje midden
+        end_pts_map    = [pts_smooth[-1]] + end_approach            # blauw eind
+
+        def _blue_approach(pts_section, group_name, tip):
+            grp = folium.FeatureGroup(name=group_name)
+            if len(pts_section) >= 2:
+                folium.PolyLine(
+                    pts_section, color="#1E90FF", weight=4,
+                    dash_array="8 6", tooltip=tip
+                ).add_to(grp)
+            for pt in pts_section[::2]:
+                folium.CircleMarker(
+                    location=pt, radius=3,
+                    color="#1E90FF", fill=True,
+                    fill_color="#1E90FF", fill_opacity=0.9
+                ).add_to(grp)
+            grp.add_to(cmap)
+
+        # Open water route (oranje, vloeiend)
+        folium.PolyLine(
+            open_water_map, color="#E07B00", weight=5, smooth_factor=2.0,
+            tooltip=("Open water route" if is_nl else "Open water route")
+        ).add_to(cmap)
+
+        # Haven-benadering bij vertrek
+        _blue_approach(
+            start_pts_map,
+            "Vertrek" if is_nl else "Departure approach",
+            f"{'Vertrek uit' if is_nl else 'Departure from'} {na} (indicatief)"
+        )
+        # Haven-benadering bij bestemming
+        _blue_approach(
+            end_pts_map,
+            "Aankomst" if is_nl else "Arrival approach",
+            f"{'Nadering van' if is_nl else 'Approach to'} {nb} (indicatief)"
+        )
+
+        folium.Marker([la,loa], popup=f"Start: {na}", icon=folium.Icon(color="green",icon="play")).add_to(cmap)
+        folium.Marker([lb,lob], popup=f"End: {nb}",   icon=folium.Icon(color="red",  icon="flag")).add_to(cmap)
+        folium.LayerControl().add_to(cmap)
+        components.html(cmap._repr_html_(), height=550)
+
+        b1, b2 = st.columns(2)
+        with b1:
+            gpx = ('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">\n  <trk>\n    <n>'
+                   + na + ' to ' + nb + '</n>\n    <trkseg>\n'
+                   + ''.join(f'      <trkpt lat="{lt}" lon="{ln}"></trkpt>\n' for lt,ln in pts)
+                   + '    </trkseg>\n  </trk>\n</gpx>')
+            st.download_button(t["m3_gpx_btn"], data=gpx,
+                file_name=f"route_{na}_{nb}.gpx", mime="application/gpx+xml",
+                use_container_width=True)
+        with b2:
+            st.link_button(t["m3_maps_btn"],
+                f"https://www.google.com/maps/dir/?api=1&origin={la},{loa}&destination={lb},{lob}",
+                use_container_width=True)
+
+        st.markdown(t["m3_wp_table"])
+        st.dataframe(df_route, use_container_width=True)
+
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# M3B – WEERGESTUURDE ROUTEOPTIMALISATIE (7 DAGEN)
+# ══════════════════════════════════════════════════════════════════════════════
+elif app_mode == t["m3b"]:
+    st.subheader(t["m3b"])
+
+    if is_nl:
+        st.markdown("""
+Deze pagina berekent de **weeroptimale route** op basis van verwachte wind en stroming
+voor de komende 7 dagen. Het algoritme gebruikt de **isochrone-methode**: vanuit elke
+positie worden 36 koersen geprojecteerd en wordt de koers gekozen die de beste
+vooruitgang naar het doel geeft, rekening houdend met:
+
+- 🗺️ **SeaRoute-corridor** — de route blijft altijd binnen het bevaarbare vaarwatergebied (geen landblokkering nodig)
+- 💨 **Windhoek** — via een vereenvoudigd polairdiagram (VMG-optimalisatie)
+- 🌊 **Stroomcomponent** — effectieve snelheid over grond incl. vloed/ebb
+- ⏱️ **Tijdsafhankelijke weersdata** — wind en stroom per uur op elk waypoint
+
+De berekening verloopt in twee stappen: eerst bepaalt SeaRoute het bevaarbare korridorgebied
+(identiek aan de standaard routeplanner), daarna zoekt het isochrone-algoritme de meest
+gunstige koers *binnen* dat korridorgebied op basis van wind en stroom.
+
+> ℹ️ Gebruikt een vereenvoudigd universeel polairdiagram. De routing geeft een goede indicatie maar kent jouw specifieke boot niet. Voeg bootparameters toe in de zijbalk voor betere nauwkeurigheid.
+        """)
+    else:
+        st.markdown("""
+This page calculates the **weather-optimal route** based on forecast wind and currents
+for the next 7 days. The algorithm uses the **isochrone method**: from each position
+36 headings are projected and the heading is selected that gives the best progress
+towards the goal, taking into account:
+
+- 🗺️ **SeaRoute corridor** — the route always stays within navigable waters (no separate land blocking needed)
+- 💨 **Wind angle** — via a simplified polar diagram (VMG optimisation)
+- 🌊 **Current component** — effective speed over ground incl. flood/ebb
+- ⏱️ **Time-dependent weather data** — wind and current per hour at each waypoint
+
+The calculation runs in two steps: first SeaRoute defines the navigable corridor
+(identical to the standard route planner), then the isochrone algorithm finds the most
+favourable heading *within* that corridor based on wind and current.
+
+> ℹ️ Uses a simplified universal polar diagram. The routing gives a good indication but does not know your specific boat. Add boat parameters in the sidebar for better accuracy.
+        """)
+
+    # ── Stap 1: invoerformulier ─────────────────────────────────────────────
+    shared_3b   = st.session_state.get("shared_location", {})
+    default_s3b = st.session_state.get("3b_start_last", "Lauwersoog")
+    default_e3b = shared_3b.get("query", st.session_state.get("3b_end_last", "Dover"))
+
+    with st.form(key="m3b_form"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            start_q_3b  = st.text_input("Startpunt" if is_nl else "Departure port",
+                                        value=default_s3b)
+            start_cc_3b = st.selectbox(t["m3_start_filter"],
+                                       list(country_mapping.keys()), key="3b_sc")
+        with c2:
+            end_q_3b  = st.text_input("Bestemming" if is_nl else "Destination",
+                                      value=default_e3b)
+            end_cc_3b = st.selectbox(t["m3_end_filter"],
+                                     list(country_mapping.keys()), key="3b_ec")
+        with c3:
+            boat_spd_3b = st.number_input(t["m3_speed"],
+                                          min_value=2.0, max_value=15.0,
+                                          value=5.0, step=0.5)
+            dep_date_3b = st.date_input(t["m3_dep_date"],
+                                        value=datetime.now().date())
+            dep_time_3b = st.time_input(t["m3_dep_time"],
+                                        value=datetime.now().time())
+        beam_w = st.slider(
+            ("Nauwkeurigheid (hogere waarde = nauwkeuriger maar trager)"
+             if is_nl else "Accuracy (higher = more accurate but slower)"),
+            min_value=20, max_value=120, value=60, step=20
+        )
+        search_clicked = st.form_submit_button(
+            "🔍 Zoek havens" if is_nl else "🔍 Search ports",
+            use_container_width=True
+        )
+
+    st.caption(
+        "⏱️ Rekentijd na bevestiging: 1-4 minuten afhankelijk van afstand en nauwkeurigheid."
+        if is_nl else
+        "⏱️ Calculation time after confirmation: 1-4 minutes depending on distance and accuracy."
+    )
+
+    if search_clicked:
+        sr3 = search_locations(start_q_3b, country_mapping[start_cc_3b], language=_lang)
+        er3 = search_locations(end_q_3b,   country_mapping[end_cc_3b],   language=_lang)
+        if not sr3 or not er3:
+            st.error(t["m3_no_ports"]); st.stop()
+        st.session_state["3b_search_done"] = True
+        st.session_state["3b_running"]     = False
+        st.session_state["3b_search_results"] = {
+            "sr3":      sr3,
+            "er3":      er3,
+            "dep_dt":   datetime.combine(dep_date_3b, dep_time_3b),
+            "boat_spd": boat_spd_3b,
+            "beam_w":   beam_w,
+            "end_cc":   country_mapping[end_cc_3b],
+        }
+
+    # ── Stap 2: havenbevestiging ─────────────────────────────────────────────
+    if st.session_state.get("3b_search_done") and not st.session_state.get("3b_running"):
+        res  = st.session_state["3b_search_results"]
+        sr3  = res["sr3"]
+        er3  = res["er3"]
+
+        st.markdown("---")
+        st.markdown(t["m3_confirm_header"])
+        cs3, ce3 = st.columns(2)
+        s_opts3 = {f"{r['name']} ({r.get('country','')}, {r.get('admin1','')})": r for r in sr3}
+        e_opts3 = {f"{r['name']} ({r.get('country','')}, {r.get('admin1','')})": r for r in er3}
+        with cs3:
+            chosen_s3 = s_opts3[st.selectbox(t["m3_confirm_start"],
+                                              list(s_opts3.keys()), key="3b_cs")]
+        with ce3:
+            chosen_e3 = e_opts3[st.selectbox(t["m3_confirm_end"],
+                                              list(e_opts3.keys()), key="3b_ce")]
+
+        # Update gedeelde locatie direct na selectie — ook als gebruiker
+        # nog niet op Start klikt, zodat andere pagina's de bestemming zien
+        _new_loc_key = f"{chosen_e3['latitude']},{chosen_e3['longitude']}"
+        _cur_loc_key = f"{st.session_state.get('shared_location',{}).get('lat','')},{st.session_state.get('shared_location',{}).get('lon','')}"
+        if _new_loc_key != _cur_loc_key:
+            st.session_state["shared_location"] = {
+                "query":   chosen_e3["name"],
+                "country": res["end_cc"],
+                "name":    chosen_e3["name"],
+                "lat":     chosen_e3["latitude"],
+                "lon":     chosen_e3["longitude"],
+            }
+
+        if st.button("🚀 Start weeroptimale berekening" if is_nl
+                     else "🚀 Start weather-optimal calculation",
+                     use_container_width=True, key="3b_go2"):
+            st.session_state["3b_running"]     = True
+            st.session_state["3b_search_done"] = False
+            st.session_state["3b_start_last"]  = chosen_s3["name"]
+            st.session_state["3b_end_last"]    = chosen_e3["name"]
+            st.session_state["shared_location"] = {
+                "query":   chosen_e3["name"],
+                "country": res["end_cc"],
+                "name":    chosen_e3["name"],
+                "lat":     chosen_e3["latitude"],
+                "lon":     chosen_e3["longitude"],
+            }
+            st.session_state["3b_calc"] = {
+                "la":       chosen_s3["latitude"],
+                "loa":      chosen_s3["longitude"],
+                "na":       chosen_s3["name"],
+                "lb":       chosen_e3["latitude"],
+                "lob":      chosen_e3["longitude"],
+                "nb":       chosen_e3["name"],
+                "dep_dt":   res["dep_dt"],
+                "boat_spd": res["boat_spd"],
+                "beam_w":   res["beam_w"],
+            }
+            st.rerun()
+
+    if st.session_state.get("3b_running") and st.session_state.get("3b_calc"):
+        p3 = st.session_state["3b_calc"]
+        la3, loa3, na3 = p3["la"], p3["loa"], p3["na"]
+        lb3, lob3, nb3 = p3["lb"], p3["lob"], p3["nb"]
+        dep_dt3   = p3["dep_dt"]
+        bspd3     = p3["boat_spd"]
+
+        prog_bar  = st.progress(0, text="SeaRoute-corridor berekenen..." if is_nl else "Building SeaRoute corridor...")
+        prog_text = st.empty()
+
+        # ── Stap 1: bouw bevaarbaar korridorgebied via SeaRoute ──────────────
+        prog_bar.progress(5, text="SeaRoute-corridor ophalen..." if is_nl else "Fetching SeaRoute corridor...")
+        corridor, _ = build_searoute_corridor(la3, loa3, lb3, lob3, width_nm=40.0)
+
+        if not corridor:
+            st.warning(
+                "SeaRoute-corridor kon niet worden berekend. "
+                "De router gebruikt geen landbeperking voor deze route."
+                if is_nl else
+                "SeaRoute corridor could not be calculated. "
+                "The router will run without land restriction for this route."
             )
-        with col_b2:
-            # FIX 8: st.link_button i.p.v. inline HTML button
-            gmaps_url = f"https://www.google.com/maps/dir/?api=1&origin={lat_a},{lon_a}&destination={lat_b},{lon_b}"
-            st.link_button("🗺️ Open in Google Maps", gmaps_url, use_container_width=True)
 
-        st.markdown("#### 📊 Waypoint Details, Oost/West Stroom (+/-) & Getij (dm)")
-        st.dataframe(df_route_res, use_container_width=True)
+        prog_bar.progress(10, text="Isochronen berekenen..." if is_nl else "Calculating isochronen...")
 
-# ==============================================================================
-# MODUS: 14-DAAGSE VERWACHTING & GETIJDEN
-# ==============================================================================
+        def _progress(frac):
+            pct = 10 + int(frac * 88)   # 10-98%
+            prog_bar.progress(min(pct, 98),
+                text=f"{'Berekening' if is_nl else 'Calculating'}: {pct}%")
+            prog_text.caption(
+                f"{'Stap' if is_nl else 'Step'} {pct}% — "
+                f"{'wind- en stroomdata per waypoint ophalen...' if is_nl else 'fetching wind & current per waypoint...'}"
+            )
+
+        # ── Stap 2: weeroptimale routing binnen de corridor ──────────────────
+        with st.spinner(""):
+            iso_path = isochrone_router(
+                la3, loa3, lb3, lob3,
+                dep_dt=dep_dt3,
+                boat_spd_kt=bspd3,
+                max_days=7,
+                dt_hours=1.0,
+                beam_width=p3["beam_w"],
+                corridor=corridor or None,
+                progress_cb=_progress,
+            )
+
+        prog_bar.progress(100, text="✅ Klaar!" if is_nl else "✅ Done!")
+        prog_text.empty()
+        st.session_state["3b_running"] = False
+
+        if not iso_path or len(iso_path) < 2:
+            st.error(
+                "Geen route gevonden binnen 7 dagen. Probeer een lagere nauwkeurigheid of kortere afstand."
+                if is_nl else
+                "No route found within 7 days. Try lower accuracy or a shorter distance."
+            ); st.stop()
+
+        # ── Samenvatting ─────────────────────────────────────────────────────
+        total_hrs_3b = float(len(iso_path))
+        total_h_3b   = int(total_hrs_3b)
+        total_m_3b   = int((total_hrs_3b - total_h_3b) * 60)
+        arr_dt_3b    = dep_dt3 + timedelta(hours=total_hrs_3b)
+
+        night_h = set(range(22, 24)) | set(range(0, 6))
+        has_night_3b = any(
+            (dep_dt3 + timedelta(hours=h)).hour in night_h
+            for h in range(int(total_hrs_3b) + 2)
+        )
+        # Werkelijk gevaren afstand (som van haversine-segmenten)
+        dist_3b_sailed = sum(
+            haversine(iso_path[i][0], iso_path[i][1],
+                      iso_path[i+1][0], iso_path[i+1][1])
+            for i in range(len(iso_path) - 1)
+        )
+
+        # SeaRoute-referentieafstand (kortste bevaarbare route) als vloer
+        try:
+            ref_route = sr.searoute([loa3, la3], [lob3, lb3], units="naut")
+            dist_3b_ref = ref_route.properties["length"]
+        except Exception:
+            dist_3b_ref = dist_3b_sailed
+
+        # De weergestuurde route kan nooit KORTER zijn dan SeaRoute:
+        # als dat toch zo berekend wordt, is het een artefact van de corridor-
+        # resolutie. We rapporteren dan de SeaRoute-afstand als minimum.
+        dist_3b = max(dist_3b_sailed, dist_3b_ref)
+
+        if dist_3b_sailed < dist_3b_ref * 0.98:
+            st.info(
+                f"ℹ️ De berekende gevaren afstand ({dist_3b_sailed:.1f} NM) ligt lager dan de "
+                f"kortste SeaRoute-referentie ({dist_3b_ref:.1f} NM). Dit is een artefact van de "
+                f"corridorresolutie. De SeaRoute-afstand wordt als minimum gehanteerd."
+                if is_nl else
+                f"ℹ️ The calculated sailed distance ({dist_3b_sailed:.1f} NM) is shorter than the "
+                f"shortest SeaRoute reference ({dist_3b_ref:.1f} NM). This is a corridor-resolution "
+                f"artefact. The SeaRoute distance is used as the minimum."
+            )
+
+        st.success(
+            f"{'✅ Weeroptimale route berekend' if is_nl else '✅ Weather-optimal route calculated'} — "
+            f"**{dist_3b:.1f} NM** — **{total_h_3b}u {total_m_3b:02d}m**"
+        )
+
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Afstand (weerroute)"   if is_nl else "Distance (weather route)", f"{dist_3b:.1f} NM",
+                   delta=f"+{dist_3b - dist_3b_ref:.1f} NM vs SeaRoute" if dist_3b > dist_3b_ref else "= SeaRoute min.",
+                   delta_color="off")
+        mc2.metric("Reistijd"         if is_nl else "Travel time",  f"{total_h_3b}u {total_m_3b:02d}m")
+        mc3.metric("Bootsnelheid"     if is_nl else "Boat speed",   f"{bspd3:.1f} kt")
+        mc4.metric("Vertrek"          if is_nl else "Departure",    dep_dt3.strftime("%d-%m %H:%M"))
+        mc5.metric("Verwachte aankomst" if is_nl else "Est. arrival", arr_dt_3b.strftime("%d-%m %H:%M"))
+
+        if has_night_3b:
+            st.warning(t["m3_night_warn"])
+        else:
+            st.success(t["m3_night_ok"])
+
+        # ── 48-uurs veervenster-analyse ───────────────────────────────────────
+        with st.spinner("48-uurs weervensters analyseren..." if is_nl
+                        else "Analysing 48-hour weather windows..."):
+            current_score = route_window_score(
+                la3, loa3, lb3, lob3, dep_dt3, bspd3,
+                min_wind=min_wind_kt, max_wind=max_wind_kt,
+                max_gust=max_gust_kt, max_wave=max_wave_m,
+                preferred_dirs=preferred_dirs or None
+            )
+            window_scores = []
+            for h_offset in range(1, 49):
+                alt_dep = dep_dt3 + timedelta(hours=h_offset)
+                score   = route_window_score(
+                    la3, loa3, lb3, lob3, alt_dep, bspd3,
+                    min_wind=min_wind_kt, max_wind=max_wind_kt,
+                    max_gust=max_gust_kt, max_wave=max_wave_m,
+                    preferred_dirs=preferred_dirs or None
+                )
+                window_scores.append((h_offset, alt_dep, score))
+
+        # Beste venster in de komende 48 uur
+        best_offset, best_dt, best_score = max(window_scores, key=lambda x: x[2])
+        # Significant beter = minstens 15 procentpunten hoger
+        THRESHOLD = 15.0
+
+        st.markdown("---")
+        st.markdown("### 🕐 " + ("Beste weervenster binnen 48 uur"
+                                  if is_nl else "Best weather window within 48 hours"))
+
+        col_now, col_best = st.columns(2)
+        col_now.metric(
+            "Huidig vertrekmoment" if is_nl else "Current departure",
+            dep_dt3.strftime("%d-%m %H:%M"),
+            f"{current_score:.0f}% {'gunstig' if is_nl else 'favourable'}"
+        )
+        col_best.metric(
+            "Beste venster" if is_nl else "Best window",
+            best_dt.strftime("%d-%m %H:%M"),
+            f"{best_score:.0f}% {'gunstig' if is_nl else 'favourable'}",
+            delta_color="normal"
+        )
+
+        # Bereken reistijd-verschil voor het beste weervenster
+        # Bij beter weer (meer zeilen, minder motor) is de gemiddelde SOG hoger
+        # Benadering: betere score → hogere gemiddelde bootsnelheid
+        score_ratio  = best_score / max(current_score, 1)
+        # VMG-verbetering: lineair geschaald, max 20% sneller bij perfecte condities
+        speed_factor = 1.0 + min(0.20, (score_ratio - 1.0) * 0.15)
+        best_travel_hrs   = total_hrs_3b / speed_factor
+        best_h, best_m_   = int(best_travel_hrs), int((best_travel_hrs % 1) * 60)
+        curr_h, curr_m_   = int(total_hrs_3b), int((total_hrs_3b % 1) * 60)
+        time_gain_hrs     = total_hrs_3b - best_travel_hrs
+        time_gain_min     = int(abs(time_gain_hrs) * 60)
+        time_gain_str     = f"{int(abs(time_gain_hrs))}u {time_gain_min % 60:02d}m"
+
+        if best_score >= current_score + THRESHOLD:
+            if is_nl:
+                st.warning(
+                    f"⚠️ Over **{best_offset} uur** ({best_dt.strftime('%d-%m om %H:%M')}) "
+                    f"zijn de weersomstandigheden op deze route significant beter: "
+                    f"**{best_score:.0f}%** gunstig vs. **{current_score:.0f}%** nu.\n\n"
+                    f"**Geschatte winst bij dit weervenster:**  \n"
+                    f"• Reistijd: ~**{best_h}u {best_m_:02d}m** (nu: {curr_h}u {curr_m_:02d}m) "
+                    f"→ **{time_gain_str} korter**  \n"
+                    f"• Aankomst: ~**{(best_dt + timedelta(hours=best_travel_hrs)).strftime('%d-%m %H:%M')}**  \n"
+                    f"Overweeg **{best_offset} uur later** te vertrekken."
+                )
+            else:
+                st.warning(
+                    f"⚠️ In **{best_offset} hours** ({best_dt.strftime('%d-%m at %H:%M')}) "
+                    f"conditions on this route are significantly better: "
+                    f"**{best_score:.0f}%** favourable vs. **{current_score:.0f}%** now.\n\n"
+                    f"**Estimated gain with this weather window:**  \n"
+                    f"• Travel time: ~**{best_h}h {best_m_:02d}m** (now: {curr_h}h {curr_m_:02d}m) "
+                    f"→ **{time_gain_str} shorter**  \n"
+                    f"• Arrival: ~**{(best_dt + timedelta(hours=best_travel_hrs)).strftime('%d-%m %H:%M')}**  \n"
+                    f"Consider departing **{best_offset} hours later**."
+                )
+        elif current_score >= 70:
+            st.success(
+                f"✅ Het gekozen vertrekmoment is al een goed weervenster "
+                f"(**{current_score:.0f}%** gunstig). Geen significant beter alternatief "
+                f"binnen 48 uur gevonden. Verwachte reistijd: **{curr_h}u {curr_m_:02d}m**."
+                if is_nl else
+                f"✅ The chosen departure is already a good weather window "
+                f"(**{current_score:.0f}%** favourable). No significantly better alternative "
+                f"found within 48 hours. Estimated travel time: **{curr_h}h {curr_m_:02d}m**."
+            )
+        else:
+            st.info(
+                f"ℹ️ Het gekozen vertrekmoment scoort **{current_score:.0f}%** gunstig "
+                f"(reistijd: **{curr_h}u {curr_m_:02d}m**). "
+                f"Het beste alternatief binnen 48 uur scoort **{best_score:.0f}%** "
+                f"(over {best_offset} uur, geschatte reistijd: ~{best_h}u {best_m_:02d}m). "
+                f"Het verschil is niet groot genoeg om aanzienlijk later te vertrekken aan te raden."
+                if is_nl else
+                f"ℹ️ The chosen departure scores **{current_score:.0f}%** favourable "
+                f"(travel time: **{curr_h}h {curr_m_:02d}m**). "
+                f"The best alternative within 48 hours scores **{best_score:.0f}%** "
+                f"(in {best_offset} hours, estimated travel time: ~{best_h}h {best_m_:02d}m). "
+                f"The difference is not large enough to strongly recommend departing later."
+            )
+
+        # Grafiek: score per uur de komende 48 uur
+        import plotly.graph_objects as _go
+        fig_win = _go.Figure()
+        hours   = [0]           + [w[0] for w in window_scores]
+        scores  = [current_score] + [w[2] for w in window_scores]
+        labels  = [dep_dt3.strftime("%d-%m %H:%M")] + [w[1].strftime("%d-%m %H:%M") for w in window_scores]
+
+        fig_win.add_trace(_go.Scatter(
+            x=labels, y=scores,
+            mode="lines+markers",
+            line=dict(color="#2ca02c", width=2),
+            marker=dict(size=5),
+            name="% gunstig" if is_nl else "% favourable",
+            hovertemplate="%{x}<br>%{y:.0f}%<extra></extra>"
+        ))
+        # Markeer huidig en beste venster
+        fig_win.add_trace(_go.Scatter(
+            x=[dep_dt3.strftime("%d-%m %H:%M")],
+            y=[current_score],
+            mode="markers",
+            marker=dict(size=12, color="royalblue", symbol="diamond"),
+            name="Gekozen vertrek" if is_nl else "Chosen departure"
+        ))
+        fig_win.add_trace(_go.Scatter(
+            x=[best_dt.strftime("%d-%m %H:%M")],
+            y=[best_score],
+            mode="markers",
+            marker=dict(size=12, color="gold", symbol="star"),
+            name="Beste venster" if is_nl else "Best window"
+        ))
+        fig_win.update_layout(
+            title="Weervenster-kwaliteit per uur (komende 48 uur)" if is_nl
+                  else "Weather window quality per hour (next 48 hours)",
+            xaxis_title="Vertrekmoment" if is_nl else "Departure time",
+            yaxis_title="% gunstig zeilweer" if is_nl else "% favourable sailing",
+            yaxis=dict(range=[0, 105]),
+            hovermode="x unified",
+            height=320,
+        )
+        # Groene zone markeren
+        fig_win.add_hrect(y0=70, y1=105,
+            fillcolor="rgba(44,160,44,0.08)", line_width=0,
+            annotation_text="Goed" if is_nl else "Good",
+            annotation_position="top left")
+        st.plotly_chart(fig_win, use_container_width=True)
+        st.caption(
+            "Berekend op basis van de huidige zeilfilters (windsnelheid, stoot, golf, richting). "
+            "Score = % van de route-segmenten dat aan alle filters voldoet op het moment van passeren."
+            if is_nl else
+            "Calculated based on current sailing filters (wind speed, gust, wave, direction). "
+            "Score = % of route segments meeting all filters at the time of passing."
+        )
+
+        # ── Kaart ─────────────────────────────────────────────────────────────
+        import math as _mth
+        path_coords = [[wp[0], wp[1]] for wp in iso_path]
+        center_lat  = sum(wp[0] for wp in iso_path) / len(iso_path)
+        center_lon  = sum(wp[1] for wp in iso_path) / len(iso_path)
+        cmap3 = folium.Map(location=[center_lat, center_lon], zoom_start=6)
+
+        # Pre-bereken advies per waypoint voor kaart-tooltip
+        def _twa_calc(hdg, w_dir):
+            return (hdg - w_dir + 180) % 360 - 180
+
+        def _hdg_calc(lat1, lon1, lat2, lon2):
+            dlon = _mth.radians(lon2 - lon1)
+            la1r, la2r = _mth.radians(lat1), _mth.radians(lat2)
+            x = _mth.sin(dlon) * _mth.cos(la2r)
+            y = _mth.cos(la1r)*_mth.sin(la2r) - _mth.sin(la1r)*_mth.cos(la2r)*_mth.cos(dlon)
+            return (_mth.degrees(_mth.atan2(x, y)) + 360) % 360
+
+        def _needs_motor(twa, w_kt):
+            twa_abs = abs(twa) % 360
+            if twa_abs > 180: twa_abs = 360 - twa_abs
+            return w_kt < 5 or twa_abs < 28
+
+        # Windpijl-intervall: elke N waypoints een pijltje
+        ARROW_EVERY = max(1, len(iso_path) // 12)
+
+        for i in range(len(path_coords) - 1):
+            wp      = iso_path[i]
+            w_kt    = float(wp[3]) if len(wp) > 3 else 10.0
+            w_dir   = float(wp[4]) if len(wp) > 4 else 0.0
+            sog     = float(wp[5]) if len(wp) > 5 else 0.0
+            t_wp    = wp[2]
+            t_str   = t_wp.strftime("%d-%m %H:%M") if hasattr(t_wp,"strftime") else str(t_wp)
+
+            # Koers naar volgend punt
+            hdg  = _hdg_calc(path_coords[i][0], path_coords[i][1],
+                              path_coords[i+1][0], path_coords[i+1][1])
+            twa  = _twa_calc(hdg, w_dir)
+            motor = _needs_motor(twa, w_kt)
+
+            seg_color = ("#2ca02c" if w_kt < 12 else
+                         "#E07B00" if w_kt < 20 else
+                         "#d62728" if w_kt < 28 else "#7b0000")
+
+            card_wind = degrees_to_cardinal(w_dir, nl=is_nl)
+            card_hdg  = degrees_to_cardinal(hdg, nl=is_nl)
+            advies_short = ("⚙️ Motor" if motor else "⛵ Zeil") if is_nl else ("⚙️ Motor" if motor else "⛵ Sail")
+
+            tooltip_txt = (
+                f"WP {i+1} | {t_str}<br>"
+                f"Wind: {w_kt:.1f} kt uit {card_wind}<br>"
+                f"Koers: {card_hdg} ({hdg:.0f}°) | TWA: {twa:.0f}°<br>"
+                f"SOG: {sog:.1f} kt | {advies_short}"
+            )
+
+            # Motorgedeelten gestippeld, zeilgedeelten doorgetrokken
+            folium.PolyLine(
+                [path_coords[i], path_coords[i+1]],
+                color=seg_color,
+                weight=4 if not motor else 3,
+                smooth_factor=2.0,
+                dash_array="1" if not motor else "8 5",
+                tooltip=folium.Tooltip(tooltip_txt, sticky=True),
+            ).add_to(cmap3)
+
+            # Windpijltje elke N waypoints
+            if i % ARROW_EVERY == 0:
+                # Windpijl als DivIcon met rotatie
+                wind_arrow_dir = (w_dir + 180) % 360   # pijl wijst waar wind naartoe gaat
+                arrow_html = (
+                    f'<div style="transform:rotate({wind_arrow_dir:.0f}deg);'
+                    f'font-size:16px;color:#1a6db5;opacity:0.85;'
+                    f'text-shadow:0 0 3px white;">➤</div>'
+                )
+                folium.Marker(
+                    location=path_coords[i],
+                    icon=folium.DivIcon(
+                        html=arrow_html,
+                        icon_size=(20, 20),
+                        icon_anchor=(10, 10),
+                    ),
+                    tooltip=f"Wind {w_kt:.1f} kt uit {card_wind}",
+                ).add_to(cmap3)
+
+        folium.Marker([la3, loa3], popup=f"Start: {na3}",
+                      icon=folium.Icon(color="green", icon="play")).add_to(cmap3)
+        folium.Marker([lb3, lob3], popup=f"End: {nb3}",
+                      icon=folium.Icon(color="red",   icon="flag")).add_to(cmap3)
+
+        # Uitleg boven de kaart
+        if is_nl:
+            st.markdown("""
+**Kleurcodering — windsterkte:** 🟢 &lt;12 kt | 🟠 12–20 kt | 🔴 20–28 kt | ⬛ &gt;28 kt  
+**Lijnstijl:** doorgetrokken = ⛵ zeilen | gestippeld = ⚙️ motor aanbevolen  
+**Blauwe pijltjes ➤** = windrichting op dat punt. Hover over de lijn voor WP-details.
+""")
+        else:
+            st.markdown("""
+**Colour coding — wind strength:** 🟢 &lt;12 kt | 🟠 12–20 kt | 🔴 20–28 kt | ⬛ &gt;28 kt  
+**Line style:** solid = ⛵ sailing | dashed = ⚙️ motor recommended  
+**Blue arrows ➤** = wind direction at that point. Hover over the line for WP details.
+""")
+
+        legend_html = """
+        <div style="position:fixed;bottom:30px;left:30px;z-index:1000;
+                    background:white;padding:10px 14px;border-radius:8px;
+                    border:2px solid #aaa;font-size:12px;font-family:sans-serif;
+                    box-shadow:2px 2px 6px rgba(0,0,0,0.15)">
+          <b>{title}</b><br>
+          <span style="color:#2ca02c;font-size:16px">&#9644;</span> &lt;12 kt &mdash; {l}<br>
+          <span style="color:#E07B00;font-size:16px">&#9644;</span> 12&ndash;20 kt &mdash; {m}<br>
+          <span style="color:#d62728;font-size:16px">&#9644;</span> 20&ndash;28 kt &mdash; {s}<br>
+          <span style="color:#7b0000;font-size:16px">&#9644;</span> &gt;28 kt &mdash; {h}<br>
+          <hr style="margin:4px 0">
+          &#9135;&#9135;&#9135; {sail} &nbsp;|&nbsp; - - - {motor}<br>
+          <span style="color:#1a6db5">➤</span> {wind_dir}
+        </div>""".format(
+            title    = "🌬️ Route-legenda" if is_nl else "🌬️ Route legend",
+            l        = "licht wind"        if is_nl else "light wind",
+            m        = "matig wind"        if is_nl else "moderate wind",
+            s        = "sterke wind"       if is_nl else "strong wind",
+            h        = "zwaar"             if is_nl else "heavy",
+            sail     = "zeilen"            if is_nl else "sailing",
+            motor    = "motor"             if is_nl else "motor",
+            wind_dir = "windrichting"      if is_nl else "wind direction",
+        )
+        cmap3.get_root().html.add_child(folium.Element(legend_html))
+        components.html(cmap3._repr_html_(), height=600)
+
+        # ── Waypoint-tabel met koers en zeil/motor-advies ─────────────────────
+        import math as _math
+
+        def _bearing(lat1, lon1, lat2, lon2):
+            """Berekent kompaskoers van punt 1 naar punt 2 (graden, 0-360)."""
+            dlon = _math.radians(lon2 - lon1)
+            lat1r, lat2r = _math.radians(lat1), _math.radians(lat2)
+            x = _math.sin(dlon) * _math.cos(lat2r)
+            y = (_math.cos(lat1r) * _math.sin(lat2r)
+                 - _math.sin(lat1r) * _math.cos(lat2r) * _math.cos(dlon))
+            brng = (_math.degrees(_math.atan2(x, y)) + 360) % 360
+            return round(brng, 1)
+
+        def _sail_advice(twa, w_kt, is_nl=True):
+            """
+            Geeft zeil/motor-advies op basis van True Wind Angle en windsterkte.
+            """
+            twa_abs = abs(twa) % 360
+            if twa_abs > 180:
+                twa_abs = 360 - twa_abs
+
+            if w_kt < 5:
+                return "⚙️ Motor" if is_nl else "⚙️ Motor"
+            elif twa_abs < 28:
+                return "⚙️ Motor (te scherp)" if is_nl else "⚙️ Motor (too close)"
+            elif twa_abs < 45:
+                return "⛵ Kruis (scherp)" if is_nl else "⛵ Close-hauled"
+            elif twa_abs < 80:
+                return "⛵ Halve wind" if is_nl else "⛵ Close reach"
+            elif twa_abs < 110:
+                return "⛵ Ruimschoots" if is_nl else "⛵ Beam reach"
+            elif twa_abs < 150:
+                return "⛵ Ruimschootser" if is_nl else "⛵ Broad reach"
+            elif twa_abs < 170:
+                return "⛵ Voor de wind" if is_nl else "⛵ Running"
+            else:
+                return "⛵/⚙️ Pal voor de wind" if is_nl else "⛵/⚙️ Dead run"
+
+        st.markdown("#### 📊 Waypoint-overzicht" if is_nl else "#### 📊 Waypoint overview")
+        rows = []
+        for i, wp in enumerate(iso_path):
+            lat_w = float(wp[0]); lon_w = float(wp[1])
+            t_w   = wp[2]
+            w_kt  = float(wp[3]) if len(wp) > 3 else 0.0
+            w_dir = float(wp[4]) if len(wp) > 4 else 0.0
+            sog   = float(wp[5]) if len(wp) > 5 else 0.0
+
+            # Koers naar volgend waypoint
+            if i < len(iso_path) - 1:
+                next_wp = iso_path[i + 1]
+                hdg = _bearing(lat_w, lon_w, float(next_wp[0]), float(next_wp[1]))
+            else:
+                hdg = _bearing(float(iso_path[i-1][0]), float(iso_path[i-1][1]),
+                               lat_w, lon_w)
+
+            # True Wind Angle = koers - windrichting
+            twa = (hdg - w_dir + 180) % 360 - 180
+            advies = _sail_advice(twa, w_kt, is_nl=is_nl)
+
+            rows.append({
+                "WP":                                              i + 1,
+                "Latitude":                                        round(lat_w, 4),
+                "Longitude":                                       round(lon_w, 4),
+                ("Tijd"        if is_nl else "Time"):              t_w.strftime("%d-%m %H:%M") if hasattr(t_w, "strftime") else str(t_w),
+                ("Koers (°)"   if is_nl else "Heading (°)"):      hdg,
+                ("Bootrichting"if is_nl else "Heading"):           degrees_to_cardinal(hdg, nl=is_nl),
+                ("Wind (kt)"   if is_nl else "Wind (kt)"):         round(w_kt, 1),
+                ("Windrichting"if is_nl else "Wind dir"):          degrees_to_cardinal(w_dir, nl=is_nl),
+                ("TWA (°)"     if is_nl else "TWA (°)"):           round(twa, 0),
+                ("SOG (kt)"    if is_nl else "SOG (kt)"):          round(sog, 2),
+                ("Advies"      if is_nl else "Advice"):            advies,
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True)
+
+        st.caption(
+            "TWA = True Wind Angle (windhoek t.o.v. de boot). "
+            "Negatief = wind van bakboord; positief = wind van stuurboord. "
+            "Kruis < 45° | Halve wind 45-80° | Ruimschoots 80-150° | Voor de wind > 150°."
+            if is_nl else
+            "TWA = True Wind Angle (wind angle relative to the boat). "
+            "Negative = wind from port; positive = wind from starboard. "
+            "Close-hauled < 45° | Close reach 45-80° | Broad reach 80-150° | Running > 150°."
+        )
+
+        # ── GPX export ────────────────────────────────────────────────────────
+        gpx3_lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+                      '<gpx version="1.1">',
+                      '  <trk>',
+                      f'    <n>{na3} to {nb3} (weather-optimal)</n>',
+                      '    <trkseg>']
+        for wp in iso_path:
+            t_iso = wp[2].isoformat() if hasattr(wp[2], "isoformat") else str(wp[2])
+            gpx3_lines.append(
+                f'      <trkpt lat="{wp[0]:.5f}" lon="{wp[1]:.5f}">'
+                f'<time>{t_iso}</time></trkpt>'
+            )
+        gpx3_lines += ['    </trkseg>', '  </trk>', '</gpx>']
+        gpx3 = "\n".join(gpx3_lines)
+
+        st.download_button(
+            "📥 Download GPX",
+            data=gpx3,
+            file_name=f"weather_route_{na3}_{nb3}.gpx",
+            mime="application/gpx+xml",
+            use_container_width=True
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# M4 – 14-DAAGSE VERWACHTING & GETIJDEN  (klik op dag in grafiek)
+# ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == t["m4"]:
     st.subheader(t["m4"])
 
-    col_fc1, col_fc_c, col_fc2 = st.columns([2, 1, 1])
-    with col_fc1:
-        location_query = st.text_input(t["loc_input"], value="Lauwersoog", key="fc_loc")
-    with col_fc_c:
-        selected_country_label = st.selectbox(t["country_filter"], list(country_mapping.keys()), key="fc_country")
-
-    country_code = country_mapping[selected_country_label]
-    # FIX 1: language param toegevoegd
-    results = search_locations(location_query, country_code, language=_lang_code)
-    if not results:
-        st.error("Locatie niet gevonden.")
+    lat, lon, loc_name, _ = _loc_widget("m4")
+    if lat is None:
         st.stop()
-    loc_options = {f"{loc['name']} ({loc.get('country', '')}, {loc.get('admin1', '')})": loc for loc in results}
-    selected_label = st.selectbox("Selecteer locatie", list(loc_options.keys()), key="fc_sel")
-    selected_loc = loc_options[selected_label]
-    lat, lon, loc_name = selected_loc['latitude'], selected_loc['longitude'], selected_loc['name']
 
-    with st.spinner("Verwachting & getijden ophalen..."):
+    with st.spinner(t["m4_spinner"]):
         df_fc = fetch_forecast_and_tides(lat, lon)
 
-    if not df_fc.empty:
-        df_fc = apply_sailing_filters(df_fc, min_wind_kt, max_wind_kt, max_gust_kt, max_wave_m)
-        df_fc, unit_label = convert_units(df_fc, unit_wind)
-        df_fc['date_str'] = df_fc['time'].dt.strftime('%Y-%m-%d (%a)')
+    if df_fc.empty:
+        st.warning(t["m4_no_loc"]); st.stop()
 
-        available_dates = sorted(df_fc['date_str'].unique().tolist())
-        with col_fc2:
-            selected_date = st.selectbox("Kies dag", available_dates)
+    # Kardinaalrichtingen (taalafhankelijk, display-time)
+    df_fc["cardinal"]         = df_fc["wind_direction_10m"].apply(lambda d: degrees_to_cardinal(d, nl=is_nl))
+    df_fc["current_cardinal"] = df_fc["ocean_current_direction"].apply(lambda d: degrees_to_cardinal(d, nl=is_nl))
 
-        daily_summary = df_fc.groupby('date_str').agg(
-            pct_ideal=('is_ideal', lambda x: round(x.mean() * 100, 2)),
-            gem_wind=('wind_display', lambda x: round(x.mean(), 2)),
-            max_stoot=('gust_display', lambda x: round(x.max(), 2)),
-            dominant_dir=('cardinal', get_dominant_wind_dir),
-            tot_rain=('precipitation', lambda x: round(x.sum(), 2)),
-            max_golf=('wave_height', lambda x: round(x.max(), 2))
-        ).reset_index()
+    # ── Stroomatlas-fallback ─────────────────────────────────────────────────
+    # Bronteksten: geen technische term "API"
+    src_live  = "Actuele voorspelling" if is_nl else "Current forecast"
+    src_atlas = "Stroomatlas"   if is_nl else "Tidal atlas"
 
-        st.markdown(f"### 14-Daags Overzicht voor **{loc_name}**")
-        fig_fc_bar = px.bar(
-            daily_summary, x='date_str', y='pct_ideal',
-            title="Percentage Geschikt Zeilweer per Dag (%)",
-            labels={'date_str': 'Datum', 'pct_ideal': 'Geschikt Zeilweer (%)'},
-            color='pct_ideal', color_continuous_scale='Greens'
+    # Controleer of de Marine API bruikbare stroom- én golfdata levert
+    api_has_current = (
+        "ocean_current_velocity" in df_fc.columns
+        and df_fc["ocean_current_velocity"].notna().any()
+        and (df_fc["ocean_current_velocity"] != 0).any()
+    )
+    api_has_wave = (
+        "wave_height" in df_fc.columns
+        and df_fc["wave_height"].notna().any()
+        and (df_fc["wave_height"] != 0).any()
+    )
+
+    uses_atlas = False
+
+    # Stroom: volledig atlas of rij-voor-rij aanvullen
+    if not api_has_current:
+        speeds, ews, nss, cards, srcs = [], [], [], [], []
+        for _, row in df_fc.iterrows():
+            spd, _d, card, e, n, _ = get_atlas_current(lat, lon, row["time"].to_pydatetime())
+            speeds.append(spd); ews.append(e); nss.append(n)
+            cards.append(card); srcs.append(src_atlas)
+        df_fc["ocean_current_velocity"] = speeds
+        df_fc["current_east_ms"]        = ews
+        df_fc["current_north_ms"]       = nss
+        df_fc["current_cardinal"]       = cards
+        df_fc["current_source"]         = srcs
+        uses_atlas = True
+    else:
+        df_fc["current_source"] = src_live
+        mask_curr = (
+            df_fc["ocean_current_velocity"].isna()
+            | (df_fc["ocean_current_velocity"] == 0)
         )
-        st.plotly_chart(fig_fc_bar, use_container_width=True)
+        for idx in df_fc[mask_curr].index:
+            row = df_fc.loc[idx]
+            spd, _d, card, e, n, _ = get_atlas_current(lat, lon, row["time"].to_pydatetime())
+            df_fc.at[idx, "ocean_current_velocity"] = spd
+            df_fc.at[idx, "current_east_ms"]        = e
+            df_fc.at[idx, "current_north_ms"]       = n
+            df_fc.at[idx, "current_cardinal"]       = card
+            df_fc.at[idx, "current_source"]         = src_atlas
+        uses_atlas = uses_atlas or mask_curr.any()
 
-        df_day = df_fc[df_fc['date_str'] == selected_date].copy()
-        st.markdown(f"### Uur-tot-Uur Verwachting, Oost/West Stroom (+/-) & Getij voor **{selected_date}**")
+    # Golfhoogte: als de Marine API geen golven heeft, gebruik atlasgebied-gemiddelden
+    # (representatieve significante golfhoogte per zeegebied, Hs in meters)
+    WAVE_ATLAS = {
+        "waddenzee_west": 0.5,  "waddenzee_oost": 0.4,
+        "westerschelde": 0.3,   "oosterschelde": 0.4,
+        "ijmuiden": 0.6,        "noordzee_nl_kust": 0.8,
+        "noordzee_midden": 1.2, "north_sea_central": 1.2,
+        "skagerrak": 0.7,       "kattegat": 0.5,
+        "baltische_zee": 0.6,   "noorwegen_westkust": 1.5,
+        "engelse_kanaal_west": 1.0, "engelse_kanaal_oost": 0.8,
+        "dover_straat": 1.1,    "ierse_zee": 1.2,
+        "schotse_westkust": 1.5,"schotse_noordkust": 2.0,
+        "atlantisch_nno": 2.5,  "golf_stream": 2.0,
+        "labrador_stroom": 2.0, "atlantisch_tropisch": 1.5,
+        "atlantisch_equator": 1.2, "atlantisch_zo": 1.8,
+        "atlantisch_zw": 1.8,   "golf_mexico": 1.0,
+        "caraibisch": 1.2,      "middellandse_west": 0.8,
+        "middellandse_oost": 0.6, "adriatische_zee": 0.6,
+        "egeische_zee": 0.7,    "straat_gibraltar": 1.0,
+        "suez_kanaal": 0.3,     "rode_zee": 0.8,
+        "arabische_zee": 1.5,   "straat_malakka": 0.6,
+        "indische_oceaan_n": 1.8,"indische_oceaan_z": 2.5,
+        "agulhas_stroom": 2.5,  "kuroshio": 2.0,
+        "california_stroom": 1.5,"pacific_no_trade": 1.5,
+        "pacific_equator": 1.2, "pacific_zo": 1.8,
+        "grote_barrière": 1.0,  "arctisch": 1.5,
+        "antarctisch": 3.5,     "open_zee": 1.5,
+    }
+    if not api_has_wave:
+        region_wave = get_atlas_region(lat, lon)
+        fallback_hs = WAVE_ATLAS.get(region_wave, 1.0)
+        # Sinusoïde: 12-uur cyclus zodat het niet een vlakke lijn wordt
+        def _wave_ts(dt_row):
+            h = dt_row.hour + dt_row.minute / 60.0
+            return round(fallback_hs * (0.7 + 0.3 * abs(np.sin(np.pi * h / 12))), 2)
+        df_fc["wave_height"] = df_fc["time"].apply(_wave_ts)
+        uses_atlas = True
 
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Zeilbaarheid Dag", f"{df_day['is_ideal'].mean()*100:.2f}%")
-        c2.metric("Gem. Wind", f"{df_day['wind_display'].mean():.2f} {unit_label}")
-        c3.metric("Max Stoot", f"{df_day['gust_display'].max():.2f} {unit_label}")
-        c4.metric("Overheersende Wind", get_dominant_wind_dir(df_day['cardinal']))
-        c5.metric("Totale Regen", f"{df_day['precipitation'].sum():.2f} mm")
+    df_fc = apply_sailing_filters(df_fc, min_wind_kt, max_wind_kt, max_gust_kt, max_wave_m, preferred_dirs=preferred_dirs or None)
+    df_fc, ul = convert_units(df_fc, unit_wind)
+    df_fc["date_str"] = df_fc["time"].dt.strftime("%Y-%m-%d (%a)")
 
-        fig_hourly = go.Figure()
-        fig_hourly.add_trace(go.Scatter(x=df_day['time'], y=df_day['wind_display'], name=f"Wind ({unit_label})", line=dict(color='blue', width=2)))
-        fig_hourly.add_trace(go.Scatter(x=df_day['time'], y=df_day['wave_height'], name="Golfhoogte (m)", yaxis="y2", line=dict(color='teal', width=2)))
-        fig_hourly.update_layout(
-            title=f"Wind & Golven op {selected_date}",
-            yaxis_title=f"Wind ({unit_label})", yaxis2=dict(title="Golf (m)", overlaying="y", side="right"),
-            hovermode="x unified"
-        )
-        st.plotly_chart(fig_hourly, use_container_width=True)
+    # ── Berekeningsuitleg ────────────────────────────────────────────────────
+    with st.expander(("ℹ️ Hoe wordt 'Geschikt Zeilweer' berekend?"
+                      if is_nl else
+                      "ℹ️ How is 'Suitable Sailing Weather' calculated?"), expanded=False):
+        dir_txt = ", ".join(preferred_dirs) if preferred_dirs else ("Alle richtingen" if is_nl else "All directions")
+        if is_nl:
+            st.markdown(f"""
+Een uur telt als **geschikt zeilweer** als **alle** onderstaande drempelwaarden tegelijk worden gehaald:
 
-        fig_tide = go.Figure()
-        if 'current_east_ms' in df_day.columns:
+| Parameter | Huidige instelling |
+|---|---|
+| Windsnelheid (min) | **{min_wind_kt} kt** |
+| Windsnelheid (max) | **{max_wind_kt} kt** |
+| Max. windstoot | **≤ {max_gust_kt} kt** |
+| Max. golfhoogte | **≤ {max_wave_m:.1f} m** |
+| Voorkeur windrichting | **{dir_txt}** |
+
+De dagbalken tonen welk percentage van de 24 uur op die dag geschikt is. Groen = meer geschikt, grijs = minder. Aanpassen via de filters in de linkerzijbalk.
+""")
+        else:
+            st.markdown(f"""
+An hour counts as **suitable sailing weather** when **all** of the following thresholds are met simultaneously:
+
+| Parameter | Current setting |
+|---|---|
+| Wind speed (min) | **{min_wind_kt} kt** |
+| Wind speed (max) | **{max_wind_kt} kt** |
+| Max. wind gust | **≤ {max_gust_kt} kt** |
+| Max. wave height | **≤ {max_wave_m:.1f} m** |
+| Preferred wind direction | **{dir_txt}** |
+
+The day bars show what percentage of the 24 hours on that day are suitable. Green = more suitable, grey = less. Adjust via the filters in the left sidebar.
+""")
+
+    daily = df_fc.groupby("date_str").agg(
+        pct  =("is_ideal",     lambda x: round(x.mean()*100,2)),
+        wnd  =("wind_display", lambda x: round(x.mean(),2)),
+        gst  =("gust_display", lambda x: round(x.max(),2)),
+        ddir =("cardinal",     get_dominant_wind_dir),
+        rain =("precipitation",lambda x: round(x.sum(),2)),
+        wave =("wave_height",  lambda x: round(x.max(),2)),
+    ).reset_index()
+
+    st.markdown(f"### {t['m4_overview']} **{loc_name}**")
+
+    if uses_atlas and not api_has_current and not api_has_wave:
+        st.info(t["m4_atlas_info"])
+    elif uses_atlas:
+        st.info(t["m4_atlas_partial"])
+
+    # ── Interactief klikbaar staafdiagram ────────────────────────────────────
+    fig_bar = go.Figure(go.Bar(
+        x=daily["date_str"],
+        y=daily["pct"],
+        marker_color=daily["pct"],
+        marker_colorscale="Greens",
+        marker_cmin=0, marker_cmax=100,
+        text=daily["pct"].apply(lambda v: f"{v}%"),
+        textposition="outside",
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            + t["m4_bar_y"] + ": %{y}%<extra></extra>"
+        ),
+    ))
+    fig_bar.update_layout(
+        title=t["m4_bar_title"],
+        xaxis_title=t["m4_bar_x"],
+        yaxis_title=t["m4_bar_y"],
+        clickmode="event+select",
+        bargap=0.15,
+    )
+
+    # on_select geeft klikinfo terug als dict; Streamlit >=1.33
+    event = st.plotly_chart(fig_bar, use_container_width=True,
+                            on_select="rerun", key="bar_click")
+
+    # Lees de geklikte dag uit het event; fallback = eerste dag
+    clicked_date = None
+    if event and event.get("selection") and event["selection"].get("points"):
+        pt = event["selection"]["points"][0]
+        clicked_date = pt.get("x")
+
+    available_dates = sorted(daily["date_str"].tolist())
+    if clicked_date not in available_dates:
+        clicked_date = available_dates[0]
+
+    # Sla op in session_state zodat de keuze bewaard blijft na re-run
+    if clicked_date:
+        st.session_state["m4_selected_date"] = clicked_date
+    selected_date = st.session_state.get("m4_selected_date", available_dates[0])
+    if selected_date not in available_dates:
+        selected_date = available_dates[0]
+
+    st.caption(t["m4_click_hint"])
+
+    # ── Dagdetails ────────────────────────────────────────────────────────────
+    df_day = df_fc[df_fc["date_str"] == selected_date].copy()
+    st.markdown(f"{t['m4_hourly_header']} **{selected_date}**")
+
+    m1c, m2c, m3c, m4c, m5c = st.columns(5)
+    m1c.metric(t["m4_metric_sail"], f"{df_day['is_ideal'].mean()*100:.2f}%")
+    m2c.metric(t["m4_metric_wind"], f"{df_day['wind_display'].mean():.2f} {ul}")
+    m3c.metric(t["m4_metric_gust"], f"{df_day['gust_display'].max():.2f} {ul}")
+    m4c.metric(t["m4_metric_dir"],  get_dominant_wind_dir(df_day["cardinal"]))
+    m5c.metric(t["m4_metric_rain"], f"{df_day['precipitation'].sum():.2f} mm")
+
+    fig_ww = go.Figure()
+    fig_ww.add_trace(go.Scatter(x=df_day["time"], y=df_day["wind_display"],
+        name=f"{t['m4_wind_trace']} ({ul})", line=dict(color="royalblue", width=2)))
+    fig_ww.add_trace(go.Scatter(x=df_day["time"], y=df_day["wave_height"],
+        name=t["m4_wave_trace"], yaxis="y2", line=dict(color="teal", width=2)))
+    fig_ww.update_layout(
+        title=f"{t['m4_wind_ttl']} {selected_date}",
+        yaxis_title=f"{t['m4_wind_y']} ({ul})",
+        yaxis2=dict(title=t["m4_wave_y"], overlaying="y", side="right"),
+        hovermode="x unified")
+    st.plotly_chart(fig_ww, use_container_width=True)
+
+    fig_tide = go.Figure()
+    if "current_east_ms" in df_day.columns:
+        api_mask = df_day.get("current_source", pd.Series("API", index=df_day.index)) == "API"
+        if api_mask.any():
             fig_tide.add_trace(go.Scatter(
-                x=df_day['time'], y=df_day['current_east_ms'],
-                name="Oost/West Stroom (+ = Oost, - = West) [m/s]",
-                line=dict(color='orange', width=2)
-            ))
-        if 'tide_dm' in df_day.columns:
+                x=df_day[api_mask]["time"], y=df_day[api_mask]["current_east_ms"],
+                name=t["m4_ew_api"], line=dict(color="orange", width=2)))
+        if (~api_mask).any():
             fig_tide.add_trace(go.Scatter(
-                x=df_day['time'], y=df_day['tide_dm'],
-                name="Getijhoogte (dm)", yaxis="y2",
-                line=dict(color='purple', width=2, dash='dot')
-            ))
+                x=df_day[~api_mask]["time"], y=df_day[~api_mask]["current_east_ms"],
+                name=t["m4_ew_atlas"], line=dict(color="peru", width=2, dash="dot")))
+    if "tide_dm" in df_day.columns:
+        fig_tide.add_trace(go.Scatter(
+            x=df_day["time"], y=df_day["tide_dm"],
+            name=t["m4_tide_trace"], yaxis="y2",
+            line=dict(color="purple", width=2, dash="dot")))
+    fig_tide.update_layout(
+        title=f"{t['m4_tide_ttl']} {selected_date}",
+        yaxis=dict(title=t["m4_tide_y"], zeroline=True, zerolinewidth=2, zerolinecolor="gray"),
+        yaxis2=dict(title=t["m4_tide_y2"], overlaying="y", side="right"),
+        hovermode="x unified")
+    st.plotly_chart(fig_tide, use_container_width=True)
 
-        fig_tide.update_layout(
-            title=f"Getijdenstroom (+/- Oost/West As) & Getijhoogte (dm) op {selected_date}",
-            yaxis=dict(title="Oost/West Stroom (m/s) [+ = Oost, - = West]", zeroline=True, zerolinewidth=2, zerolinecolor='gray'),
-            yaxis2=dict(title="Getijhoogte (dm)", overlaying="y", side="right"),
-            hovermode="x unified"
-        )
-        st.plotly_chart(fig_tide, use_container_width=True)
+    disp_cols = ["time","wind_display","wind_gusts_10m","cardinal","wave_height",
+                 "ocean_current_velocity","current_east_ms","current_north_ms",
+                 "current_cardinal","tide_dm","precipitation","current_source"]
+    rename = {
+        "time":                    t["m4_table_time"],
+        "wind_display":            f'{t["m4_table_wind"]} ({ul})',
+        "wind_gusts_10m":          t["m4_table_gust"],
+        "cardinal":                t["m4_table_wdir"],
+        "wave_height":             t["m4_table_wave"],
+        "ocean_current_velocity":  t["m4_table_curr"],
+        "current_east_ms":         t["m4_table_ew"],
+        "current_north_ms":        t["m4_table_ns"],
+        "current_cardinal":        t["m4_table_cdir"],
+        "tide_dm":                 t["m4_table_tide"],
+        "precipitation":           t["m4_table_rain"],
+        "current_source":          t["m4_table_src"],
+    }
+    df_tbl = df_day[[c for c in disp_cols if c in df_day.columns]].rename(columns=rename)
+    st.dataframe(df_tbl, use_container_width=True)
 
-        display_cols = ['time', 'wind_display', 'wind_gusts_10m', 'cardinal', 'wave_height', 'ocean_current_velocity', 'current_east_ms', 'current_north_ms', 'current_cardinal', 'tide_dm', 'precipitation']
-        rename_map = {
-            'time': 'Tijd',
-            'wind_display': f'Wind ({unit_label})',
-            'wind_gusts_10m': 'Stoten (kt)',
-            'cardinal': 'Windrichting',
-            'wave_height': 'Golfhoogte (m)',
-            'ocean_current_velocity': 'Tot. Stroom (m/s)',
-            'current_east_ms': 'Oost/West Stroom (+/- m/s)',
-            'current_north_ms': 'Noord/Zuid Stroom (+/- m/s)',
-            'current_cardinal': 'Stroomrichting',
-            'tide_dm': 'Getijhoogte (dm)',
-            'precipitation': 'Neerslag (mm)'
-        }
-        df_table = df_day[[c for c in display_cols if c in df_day.columns]].rename(columns=rename_map)
-        st.dataframe(df_table, use_container_width=True)
 
-# ==============================================================================
-# MODUS: TECHNISCHE BRONNEN & DISCLAIMER
-# ==============================================================================
+# ══════════════════════════════════════════════════════════════════════════════
+# M5 – TECHNISCHE BRONNEN & DISCLAIMER
+# ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == t["m5"]:
     st.subheader(t["m5"])
-    st.markdown("""
-    ### Overzicht van Open-Source Databronnen en API's
-    Deze applicatie maakt gebruik van geavanceerde open-source weer-, mariene en routing-modellen:
+    if is_nl:
+        st.markdown("""
+### Overzicht van databronnen en API's
 
-    1. **Open-Meteo Weather Archive & Forecast API:**
-       - **Parameters:** Windsnelheid op 10m hoogte (`wind_speed_10m`), windstoten (`wind_gusts_10m`), windrichting (`wind_direction_10m`), luchttemperatuur (`temperature_2m`) en neerslag (`precipitation`).
-       - **Gebruik:** Berekent historische weerpatronen (tot 10 jaar terug) en 14-daagse verwachtingen per uur.
+**1. Open-Meteo Weather Archive & Forecast API**
+Windsnelheid, windstoten, windrichting, temperatuur en neerslag op uurbasis.
+Historisch archief tot 10 jaar terug; 14-daagse verwachting per uur.
 
-    2. **Open-Meteo Marine API:**
-       - **Parameters:** Golfhoogte (`wave_height`), golfperiode (`wave_period`), oceaangolfrichting, oceaankanaal-stroomsnelheid (`ocean_current_velocity`) en stroomrichting (`ocean_current_direction`).
-       - **Getijgegevens:** Waterstand ten opzichte van gemiddeld zeeniveau (`sea_level_height_msl`), omgerekend naar **decimeters (dm)** voor nauwkeurige ondiepte- en drempelbeoordelingen.
-       - **Stroomanalyse (+/- as):** Vector-ontbinding van de stroomsnelheid in een **Oost/West-component** (waarbij Oost positief en West negatief is) en een **Noord/Zuid-component**.
+**2. Open-Meteo Marine API**
+Golfhoogte, golfperiode, oceaanstroomsnelheid en -richting, waterhoogte t.o.v. MSL (omgerekend naar dm).
+Vectorontbinding in Oost/West- en Noord/Zuid-component.
 
-    3. **SeaRoute Library (`searoute`):**
-       - Berekent automatisch de meest optimale maritieme water-routing (om landmassa's en ondieptes heen) tussen havens en waypoints in zeemijlen (NM).
+**3. Wereldwijde Stroomatlas (fallback)**
+Wanneer de Marine API geen stroomdata levert, wordt teruggevallen op een ingebouwde atlas gebaseerd op:
+- **HR33** (Hydrografische Dienst NL) – Waddenzee, Noordzee, Westerschelde, Oosterschelde
+- **UKHO NP-atlassen** – Engelse Kanaal, Ierse Zee, Schotse kust, Dover Straat
+- **HYCOM / OSCAR** – Mondiale oceaanstromen (Golfstroom, Kuroshio, Agulhas, etc.)
+- **SHOM** (FR) – Middellandse Zee, Atlantische kust FR
+- **NOAA NCEI** – Klimatologische gemiddelden Atlantische en Stille Oceaan
 
-    4. **OpenStreetMap & Folium:**
-       - Interactieve kaartvisualisatie van de berekende routes, inclusief GPX-exportfunctionaliteit en directe integratie met navigatie-apps.
+De atlaswaarden zijn indicatief. Altijd raadplegen: officiële getijtafels, Notices to Mariners en actuele GRIB-bestanden.
 
-    ---
-    ⚠️ **Disclaimer:** Deze software is uitsluitend bedoeld als hulpmiddel en ter ondersteuning van de passageplanning. De gebruiker blijft te allen tijde zelf verantwoordelijk voor de veiligheid aan boord, actuele officiële waterkaarten, lokale getijdentabellen en weersvoorspellingen.
-    """)
+**4. SeaRoute** – Maritieme open-waterrouting om landmassa's heen (NM).
 
-# ==============================================================================
-# MODUS: DONATIES & SUPPORT
-# ==============================================================================
+**5. OpenStreetMap / Folium** – Interactieve kaartvisualisatie met GPX-export.
+
+---
+⚠️ **Disclaimer:** Uitsluitend bedoeld als planningshulpmiddel.
+Geen vervanging voor officiële zeekaarten, getijdentabellen of actuele meteorologische diensten.
+De kapitein blijft te allen tijde verantwoordelijk voor de veiligheid aan boord.
+        """)
+    else:
+        st.markdown("""
+### Overview of data sources and APIs
+
+**1. Open-Meteo Weather Archive & Forecast API**
+Wind speed, gusts, direction, temperature and precipitation, hourly.
+Historical archive up to 10 years back; 14-day hourly forecast.
+
+**2. Open-Meteo Marine API**
+Wave height, wave period, ocean current speed and direction, water height vs MSL (converted to dm).
+Vector decomposition into East/West and North/South components.
+
+**3. Global Tidal Current Atlas (fallback)**
+When the Marine API returns no current data, the app falls back to a built-in atlas based on:
+- **HR33** (Hydrographic Service NL) – Wadden Sea, North Sea, Western & Eastern Scheldt
+- **UKHO NP Atlases** – English Channel, Irish Sea, Scottish coast, Dover Strait
+- **HYCOM / OSCAR** – Global ocean currents (Gulf Stream, Kuroshio, Agulhas, etc.)
+- **SHOM** (FR) – Mediterranean Sea, French Atlantic coast
+- **NOAA NCEI** – Climatological averages, Atlantic and Pacific
+
+Atlas values are indicative. Always consult: official tide tables, Notices to Mariners and current GRIB files.
+
+**4. SeaRoute** – Maritime open-water routing around land masses (NM).
+
+**5. OpenStreetMap / Folium** – Interactive chart visualization with GPX export.
+
+---
+⚠️ **Disclaimer:** Intended as a planning aid only.
+Not a substitute for official nautical charts, tide tables, or meteorological services.
+The skipper remains solely responsible for safety onboard at all times.
+        """)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# M6 – DONATIES & SUPPORT
+# ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == t["m6"]:
     st.subheader(t["m6"])
-    st.write("Steun de verdere ontwikkeling van deze app en geef feedback en suggesties via Ko-fi!")
-    # FIX 8: st.link_button i.p.v. inline HTML button
-    st.link_button("☕ Steun via Ko-fi", "https://ko-fi.com/sailingplanner", use_container_width=True)
+
+    intro = (
+        "Deze app is gratis beschikbaar. "
+        "Als je hem waardeert en de verdere ontwikkeling wilt steunen, "
+        "kun je een kleine bijdrage doen via Ko-fi. "
+        "Elke bijdrage wordt gewaardeerd! ☕"
+        if is_nl else
+        "This app is available free of charge. "
+        "If you find it useful and want to support further development, "
+        "consider making a small contribution via Ko-fi. "
+        "Every contribution is appreciated! ☕"
+    )
+    st.write(intro)
+
+    st.markdown("---")
+
+    # Prominente Ko-fi knop via gestylde HTML (past in elk Streamlit-thema)
+    kofi_label  = "☕ Steun de ontwikkelaar via Ko-fi" if is_nl else "☕ Support the developer via Ko-fi"
+    kofi_sub    = "Klik hier om een koffie te kopen" if is_nl else "Click here to buy a coffee"
+    st.markdown(
+        f"""
+        <a href="https://ko-fi.com/sailingplanner" target="_blank" style="text-decoration:none;">
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: linear-gradient(135deg, #FF5E5B 0%, #ff914d 100%);
+            color: white;
+            border-radius: 14px;
+            padding: 18px 28px;
+            font-family: sans-serif;
+            box-shadow: 0 4px 14px rgba(255,94,91,0.40);
+            cursor: pointer;
+            transition: opacity .2s;
+            max-width: 480px;
+            margin: 12px auto;
+          ">
+            <span style="font-size: 2.4rem; line-height:1;">☕</span>
+            <div>
+              <div style="font-size: 1.15rem; font-weight: 700; letter-spacing:.3px;">
+                {kofi_label}
+              </div>
+              <div style="font-size: 0.82rem; opacity: .88; margin-top: 3px;">
+                {kofi_sub}
+              </div>
+            </div>
+          </div>
+        </a>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+    thanks = (
+        "Hartelijk dank voor je steun — het wordt enorm gewaardeerd! 🙏"
+        if is_nl else
+        "Thank you so much for your support — it is greatly appreciated! 🙏"
+    )
+    st.markdown(f"<p style='text-align:center; color: #888; font-size:0.9rem;'>{thanks}</p>",
+                unsafe_allow_html=True)
