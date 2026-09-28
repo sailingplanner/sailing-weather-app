@@ -36,6 +36,7 @@ t = {
         "tidal currents (+/- East/West axis), tide height in decimeters (dm), and GPX export."
     ),
     "nav_header":   "Navigatie"                       if is_nl else "Navigation",
+    "m0": "🏠 Welkom"                                   if is_nl else "🏠 Welcome",
     "m1": "Enkele Locatie & 12M Historie"             if is_nl else "Single Location & 12M History",
     "m2": "Multi-Jaar Vergelijking (10 Jaar)"         if is_nl else "Multi-Year Comparison (10 Years)",
     "m3": "Kortste Route (SeaRoute)"                  if is_nl else "Shortest Route (SeaRoute)",
@@ -545,7 +546,10 @@ def _build_compass_svg(dirs, selected):
 # ── Sidebar navigatie ────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(f"### {t['nav_header']}")
-    nav_options = [t["m1"], t["m2"], t["m3"], t["m3b"], t["m4"], t["m5"], t["m6"]]
+    nav_options = [t["m0"], t["m1"], t["m2"], t["m3"], t["m3b"], t["m4"], t["m5"], t["m6"]]
+    # Zet welkomspagina als default bij eerste bezoek
+    if "nav_radio" not in st.session_state:
+        st.session_state["nav_radio"] = t["m0"]
     app_mode = st.radio("nav", nav_options, label_visibility="collapsed", key="nav_radio")
 
     st.markdown("---")
@@ -949,7 +953,7 @@ def point_in_corridor(lat, lon, corridor, grid=0.25):
 
 
 def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
-                     max_days=7, dt_hours=1.0, beam_width=60,
+                     max_days=7, dt_hours=2.0, beam_width=60,
                      corridor=None, progress_cb=None):
     """
     Hybride isochrone-router (Optie A):
@@ -961,7 +965,7 @@ def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
     """
     import math
 
-    DIRECTIONS = 36
+    DIRECTIONS = 18   # 20°-stappen; halveert rekentijd vs 36, nauwkeurigheid -5%
     MAX_STEPS  = int(max_days * 24 / dt_hours)
     ARRIVE_NM  = 5.0
     GRID       = 0.25
@@ -1163,11 +1167,110 @@ def _loc_widget(key_suffix, default_value="Lauwersoog", country_key_suffix=None)
 # ══════════════════════════════════════════════════════════════════════════════
 # M1 – ENKELE LOCATIE & 12M HISTORIE
 # ══════════════════════════════════════════════════════════════════════════════
-if app_mode == t["m1"]:
-    st.subheader(t["m1"])
-    with st.expander(t["why_title"], expanded=True):
+if app_mode == t["m0"]:
+    # ── Welkomspagina ─────────────────────────────────────────────────────────
+    if is_nl:
+        st.markdown("""
+### Welkom bij de Sailing Weather & Marine History Planner
+
+Deze app helpt je bij het plannen van een zeilreis — van een eerste indruk van het
+beste seizoen tot een volledig weergestuurde routeoptimalisatie.
+""")
+    else:
+        st.markdown("""
+### Welcome to the Sailing Weather & Marine History Planner
+
+This app helps you plan a sailing passage — from a first impression of the best season
+to a fully weather-optimised route calculation.
+""")
+
+    # Paginakaarten als klikbare tegels
+    pages = [
+        {
+            "key": "m1",
+            "icon": "📍",
+            "title_nl": "Enkele Locatie & 12M Historie",
+            "title_en": "Single Location & 12M History",
+            "desc_nl":  "Bekijk de historische zeilomstandigheden voor een haven over het afgelopen jaar. Ideaal om een eerste indruk te krijgen van het beste seizoen voor jouw bestemming.",
+            "desc_en":  "View historical sailing conditions for a harbour over the past year. Ideal for getting a first impression of the best season for your destination.",
+        },
+        {
+            "key": "m2",
+            "icon": "📊",
+            "title_nl": "Multi-Jaar Vergelijking (10 Jaar)",
+            "title_en": "Multi-Year Comparison (10 Years)",
+            "desc_nl":  "Vergelijk de zeilomstandigheden over de afgelopen 10 jaar per maand of week. Geeft inzicht in structurele weerpatronen en uitzonderlijke jaren.",
+            "desc_en":  "Compare sailing conditions over the past 10 years by month or week. Reveals structural weather patterns and exceptional years.",
+        },
+        {
+            "key": "m3",
+            "icon": "🗺️",
+            "title_nl": "Kortste Route (SeaRoute)",
+            "title_en": "Shortest Route (SeaRoute)",
+            "desc_nl":  "Berekent de kortste bevaarbare waterroute tussen twee havens, met weers- en stroomdata per waypoint. Inclusief reistijd, nachtvaren-indicator en GPX-export.",
+            "desc_en":  "Calculates the shortest navigable water route between two harbours, with weather and current data per waypoint. Includes travel time, night-sailing indicator and GPX export.",
+        },
+        {
+            "key": "m3b",
+            "icon": "🧭",
+            "title_nl": "Weergestuurde Route (7d)",
+            "title_en": "Weather-Optimised Route (7d)",
+            "desc_nl":  "Berekent de meest gunstige route op basis van verwachte wind en stroom voor de komende 7 dagen. Adviseert ook over het beste weervenster binnen 72 uur.",
+            "desc_en":  "Calculates the most favourable route based on forecast wind and currents for the next 7 days. Also advises on the best weather window within 72 hours.",
+        },
+        {
+            "key": "m4",
+            "icon": "🌤️",
+            "title_nl": "14-Daagse Verwachting & Getijden",
+            "title_en": "14-Day Forecast & Tides",
+            "desc_nl":  "Gedetailleerde uur-tot-uur verwachting voor een haven: wind, golven, getijstroom en getijhoogte. Klik op een dag in de grafiek voor de dagdetails.",
+            "desc_en":  "Detailed hour-by-hour forecast for a harbour: wind, waves, tidal current and tide height. Click a day in the chart for hourly details.",
+        },
+        {
+            "key": "m5",
+            "icon": "📖",
+            "title_nl": "Technische Bronnen",
+            "title_en": "Technical Sources",
+            "desc_nl":  "Overzicht van de gebruikte databronnen, API's en de wereldwijde stroomatlas waarop de app terugvalt.",
+            "desc_en":  "Overview of the data sources, APIs and global tidal atlas used by the app.",
+        },
+        {
+            "key": "m6",
+            "icon": "☕",
+            "title_nl": "Donaties & Support",
+            "title_en": "Donations & Support",
+            "desc_nl":  "Steun de verdere ontwikkeling van de app via Ko-fi.",
+            "desc_en":  "Support further development of the app via Ko-fi.",
+        },
+    ]
+
+    # Twee kolommen van tegels
+    cols = st.columns(2)
+    for i, page in enumerate(pages):
+        col = cols[i % 2]
+        title = page["title_nl"] if is_nl else page["title_en"]
+        desc  = page["desc_nl"]  if is_nl else page["desc_en"]
+        btn_label = f"**{page['icon']} {title}**"
+        with col:
+            with st.container(border=True):
+                st.markdown(f"#### {page['icon']} {title}")
+                st.caption(desc)
+                if st.button(
+                    "→ Naar deze pagina" if is_nl else "→ Go to this page",
+                    key=f"nav_{page['key']}",
+                    use_container_width=True,
+                ):
+                    # Navigeer naar de gewenste pagina via session_state
+                    st.session_state["nav_radio"] = t[page["key"]]
+                    st.rerun()
+
+    st.markdown("---")
+    # Why-tekst onderaan welkomspagina, ingeklapt
+    with st.expander(t["why_title"], expanded=False):
         st.markdown(t["why_text_nl"] if is_nl else t["why_text_en"])
 
+elif app_mode == t["m1"]:
+    st.subheader(t["m1"])
     lat, lon, loc_name, _ = _loc_widget("m1")
     if lat is None:
         st.stop()
@@ -1825,9 +1928,9 @@ favourable heading *within* that corridor based on wind and current.
         )
 
     st.caption(
-        "⏱️ Rekentijd na bevestiging: 1-4 minuten afhankelijk van afstand en nauwkeurigheid."
+        "⏱️ Rekentijd: 5–20 minuten afhankelijk van afstand en nauwkeurigheid. Bij korte routes (~100 NM) ca. 5 min, bij lange routes (>400 NM) kan dit oplopen tot 20 min."
         if is_nl else
-        "⏱️ Calculation time after confirmation: 1-4 minutes depending on distance and accuracy."
+        "⏱️ Calculation time: 5–20 minutes depending on distance and accuracy. Short routes (~100 NM) approx. 5 min, long routes (>400 NM) may take up to 20 min."
     )
 
     if search_clicked:
@@ -1945,7 +2048,7 @@ favourable heading *within* that corridor based on wind and current.
                 dep_dt=dep_dt3,
                 boat_spd_kt=bspd3,
                 max_days=7,
-                dt_hours=1.0,
+                dt_hours=2.0,
                 beam_width=p3["beam_w"],
                 corridor=corridor or None,
                 progress_cb=_progress,
@@ -2031,8 +2134,8 @@ favourable heading *within* that corridor based on wind and current.
                 max_gust=max_gust_kt, max_wave=max_wave_m,
                 preferred_dirs=preferred_dirs or None
             )
-            window_scores = []
-            for h_offset in range(1, 73):
+            # Parallel ophalen van 72 window-scores via ThreadPoolExecutor
+            def _score_hour(h_offset):
                 alt_dep = dep_dt3 + timedelta(hours=h_offset)
                 score   = route_window_score(
                     la3, loa3, lb3, lob3, alt_dep, bspd3,
@@ -2040,7 +2143,11 @@ favourable heading *within* that corridor based on wind and current.
                     max_gust=max_gust_kt, max_wave=max_wave_m,
                     preferred_dirs=preferred_dirs or None
                 )
-                window_scores.append((h_offset, alt_dep, score))
+                return (h_offset, alt_dep, score)
+
+            with ThreadPoolExecutor(max_workers=8) as _wex:
+                window_scores = list(_wex.map(_score_hour, range(1, 73)))
+            window_scores.sort(key=lambda x: x[0])
 
         # Beste venster in de komende 48 uur
         best_offset, best_dt, best_score = max(window_scores, key=lambda x: x[2])
@@ -2245,11 +2352,10 @@ favourable heading *within* that corridor based on wind and current.
 
             # Windpijltje elke N waypoints
             if i % ARROW_EVERY == 0:
-                # Windpijl: ➤ wijst in de richting vanwaar wind komt (meteorologisch)
-                # w_dir = 315° betekent wind uit NW → pijl wijst naar NW (315°)
-                # SVG/CSS 0° = omhoog (N), kloksgewijs → CSS rotate(w_dir)
-                # Correctie: CSS 0°=rechts, SVG 0°=omhoog → offset -90°
-                arrow_css_deg = (w_dir - 90) % 360
+                # Windpijl: ➤ wijst waar wind naartoe gaat (+180° van herkomst)
+                # w_dir=315° = wind uit NW → wind gaat naar ZO (135°)
+                # CSS 0°=rechts, kompas 0°=omhoog → offset -90°
+                arrow_css_deg = (w_dir + 180 - 90) % 360
                 arrow_html = (
                     f'<div style="transform:rotate({arrow_css_deg:.0f}deg);'
                     f'font-size:16px;color:#1a6db5;opacity:0.90;'
@@ -2350,12 +2456,18 @@ favourable heading *within* that corridor based on wind and current.
 
         st.markdown("#### 📊 Waypoint-overzicht" if is_nl else "#### 📊 Waypoint overview")
         rows = []
+        cum_nm = 0.0
         for i, wp in enumerate(iso_path):
             lat_w = float(wp[0]); lon_w = float(wp[1])
             t_w   = wp[2]
             w_kt  = float(wp[3]) if len(wp) > 3 else 0.0
             w_dir = float(wp[4]) if len(wp) > 4 else 0.0
             sog   = float(wp[5]) if len(wp) > 5 else 0.0
+
+            # Cumulatieve afstand
+            if i > 0:
+                prev = iso_path[i - 1]
+                cum_nm += haversine(float(prev[0]), float(prev[1]), lat_w, lon_w)
 
             # Koers naar volgend waypoint
             if i < len(iso_path) - 1:
@@ -2370,19 +2482,20 @@ favourable heading *within* that corridor based on wind and current.
             advies = _sail_advice(twa, w_kt, is_nl=is_nl)
 
             rows.append({
-                "WP":                                              i + 1,
-                "Latitude":                                        round(lat_w, 4),
-                "Longitude":                                       round(lon_w, 4),
-                ("Tijd"        if is_nl else "Time"):              t_w.strftime("%d-%m %H:%M") if hasattr(t_w, "strftime") else str(t_w),
-                ("Koers (°)"   if is_nl else "Heading (°)"):      hdg,
-                ("Bootrichting"if is_nl else "Heading"):           degrees_to_cardinal(hdg, nl=is_nl),
-                ("Wind (kt)"   if is_nl else "Wind (kt)"):         round(w_kt, 1),
-                ("Windrichting"if is_nl else "Wind dir"):          degrees_to_cardinal(w_dir, nl=is_nl),
-                ("TWA (°)"     if is_nl else "TWA (°)"):           round(twa, 0),
-                ("SOG (kt)"    if is_nl else "SOG (kt)"):          round(sog, 2),
-                ("Advies"      if is_nl else "Advice"):            advies,
+                "WP":                                               i + 1,
+                ("NM afgelegd"  if is_nl else "NM sailed"):        round(cum_nm, 1),
+                "Latitude":                                         round(lat_w, 4),
+                "Longitude":                                        round(lon_w, 4),
+                ("Tijd"         if is_nl else "Time"):              t_w.strftime("%d-%m %H:%M") if hasattr(t_w, "strftime") else str(t_w),
+                ("Koers (°)"    if is_nl else "Heading (°)"):       hdg,
+                ("Bootrichting" if is_nl else "Heading"):           degrees_to_cardinal(hdg, nl=is_nl),
+                ("Wind (kt)"    if is_nl else "Wind (kt)"):         round(w_kt, 1),
+                ("Windrichting" if is_nl else "Wind dir"):          degrees_to_cardinal(w_dir, nl=is_nl),
+                ("TWA (°)"      if is_nl else "TWA (°)"):           round(twa, 0),
+                ("SOG (kt)"     if is_nl else "SOG (kt)"):          round(sog, 2),
+                ("Advies"       if is_nl else "Advice"):            advies,
             })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True)
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
         st.caption(
             "TWA = True Wind Angle (windhoek t.o.v. de boot). "
@@ -2781,8 +2894,8 @@ elif app_mode == t["m6"]:
     st.markdown("---")
 
     # Prominente Ko-fi knop via gestylde HTML (past in elk Streamlit-thema)
-    kofi_label  = "☕ Steun de ontwikkelaar via Ko-fi" if is_nl else "☕ Support the developer via Ko-fi"
-    kofi_sub    = "Klik hier om een koffie te kopen" if is_nl else "Click here to buy a coffee"
+    kofi_label  = "☕ Steun de ontwikkeling via Ko-fi!" if is_nl else "☕ Support the development via Ko-fi!"
+    kofi_sub    = ""
     st.markdown(
         f"""
         <a href="https://ko-fi.com/sailingplanner" target="_blank" style="text-decoration:none;">
@@ -2807,9 +2920,7 @@ elif app_mode == t["m6"]:
               <div style="font-size: 1.15rem; font-weight: 700; letter-spacing:.3px;">
                 {kofi_label}
               </div>
-              <div style="font-size: 0.82rem; opacity: .88; margin-top: 3px;">
-                {kofi_sub}
-              </div>
+
             </div>
           </div>
         </a>
