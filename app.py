@@ -36,7 +36,7 @@ t = {
         "tidal currents (+/- East/West axis), tide height in decimeters (dm), and GPX export."
     ),
     "nav_header":   "Navigatie"                       if is_nl else "Navigation",
-    "m0": "🏠 Welkom"                                   if is_nl else "🏠 Welcome",
+    "m0": "Welkom"                                      if is_nl else "Welcome",
     "m1": "Enkele Locatie & 12M Historie"             if is_nl else "Single Location & 12M History",
     "m2": "Multi-Jaar Vergelijking (10 Jaar)"         if is_nl else "Multi-Year Comparison (10 Years)",
     "m3": "Kortste Route (SeaRoute)"                  if is_nl else "Shortest Route (SeaRoute)",
@@ -547,7 +547,12 @@ def _build_compass_svg(dirs, selected):
 with st.sidebar:
     st.markdown(f"### {t['nav_header']}")
     nav_options = [t["m0"], t["m1"], t["m2"], t["m3"], t["m3b"], t["m4"], t["m5"], t["m6"]]
-    # Zet welkomspagina als default bij eerste bezoek
+    # Navigatie: go_to_page wordt gezet door welkomspagina-knoppen
+    # en wordt hier VOOR de radio-widget gelezen zodat er geen conflict is
+    if "go_to_page" in st.session_state:
+        _target = st.session_state.pop("go_to_page")
+        if _target in nav_options:
+            st.session_state["nav_radio"] = _target
     if "nav_radio" not in st.session_state:
         st.session_state["nav_radio"] = t["m0"]
     app_mode = st.radio("nav", nav_options, label_visibility="collapsed", key="nav_radio")
@@ -953,8 +958,8 @@ def point_in_corridor(lat, lon, corridor, grid=0.25):
 
 
 def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
-                     max_days=7, dt_hours=2.0, beam_width=60,
-                     corridor=None, progress_cb=None):
+                     max_days=7, dt_hours=1.0, beam_width=60,
+                     directions=24, corridor=None, progress_cb=None):
     """
     Hybride isochrone-router (Optie A):
     - SeaRoute-corridor definieert het bevaarbare gebied
@@ -965,7 +970,7 @@ def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
     """
     import math
 
-    DIRECTIONS = 18   # 20°-stappen; halveert rekentijd vs 36, nauwkeurigheid -5%
+    DIRECTIONS = directions   # instelbaar via nauwkeurigheidsoptie
     MAX_STEPS  = int(max_days * 24 / dt_hours)
     ARRIVE_NM  = 5.0
     GRID       = 0.25
@@ -1244,25 +1249,57 @@ to a fully weather-optimised route calculation.
         },
     ]
 
-    # Twee kolommen van tegels
-    cols = st.columns(2)
-    for i, page in enumerate(pages):
-        col = cols[i % 2]
-        title = page["title_nl"] if is_nl else page["title_en"]
-        desc  = page["desc_nl"]  if is_nl else page["desc_en"]
-        btn_label = f"**{page['icon']} {title}**"
-        with col:
-            with st.container(border=True):
-                st.markdown(f"#### {page['icon']} {title}")
-                st.caption(desc)
-                if st.button(
-                    "→ Naar deze pagina" if is_nl else "→ Go to this page",
-                    key=f"nav_{page['key']}",
-                    use_container_width=True,
-                ):
-                    # Navigeer naar de gewenste pagina via session_state
-                    st.session_state["nav_radio"] = t[page["key"]]
+    # CSS voor gelijke kaarthoogte en professionele uitstraling
+    st.markdown("""
+    <style>
+    .page-card {
+        background: linear-gradient(145deg, #1a2a4a 0%, #243560 100%);
+        border-radius: 12px;
+        padding: 20px 22px 16px 22px;
+        height: 175px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .page-card-icon { font-size: 1.6rem; line-height: 1; margin-bottom: 4px; }
+    .page-card-title {
+        font-size: 0.95rem; font-weight: 700;
+        color: #e8eef8; margin-bottom: 4px; line-height: 1.25;
+    }
+    .page-card-desc {
+        font-size: 0.78rem; color: #9ab0cc;
+        line-height: 1.4; flex-grow: 1;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Render kaarten in 2 kolommen; knoppen onder de kaart
+    rows_of_pages = [pages[i:i+2] for i in range(0, len(pages), 2)]
+    btn_lbl = "→ Naar deze pagina" if is_nl else "→ Go to this page"
+
+    for row in rows_of_pages:
+        cols = st.columns(2)
+        for j, page in enumerate(row):
+            title = page["title_nl"] if is_nl else page["title_en"]
+            desc  = page["desc_nl"]  if is_nl else page["desc_en"]
+            with cols[j]:
+                st.markdown(f"""
+                <div class="page-card">
+                    <div class="page-card-icon">{page["icon"]}</div>
+                    <div class="page-card-title">{title}</div>
+                    <div class="page-card-desc">{desc}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(btn_lbl, key=f"nav_{page['key']}",
+                             use_container_width=True):
+                    st.session_state["go_to_page"] = t[page["key"]]
                     st.rerun()
+        # Lege kolom opvullen als oneven aantal pagina's in rij
+        if len(row) == 1:
+            cols[1].empty()
 
     st.markdown("---")
     # Why-tekst onderaan welkomspagina, ingeklapt
@@ -1917,20 +1954,40 @@ favourable heading *within* that corridor based on wind and current.
                                         value=datetime.now().date())
             dep_time_3b = st.time_input(t["m3_dep_time"],
                                         value=datetime.now().time())
-        beam_w = st.slider(
-            ("Nauwkeurigheid (hogere waarde = nauwkeuriger maar trager)"
-             if is_nl else "Accuracy (higher = more accurate but slower)"),
-            min_value=20, max_value=120, value=60, step=20
-        )
+        st.markdown("---")
+        _acc_label = "Berekeningsnauwkeurigheid" if is_nl else "Calculation accuracy"
+        _acc_opts_nl = [
+            "🚀 Snel (5-8 min) — geschikt voor eerste indruk",
+            "⚖️ Gebalanceerd (8-15 min) — aanbevolen voor planning",
+            "🎯 Nauwkeurig (15-25 min) — beste kwaliteit, GPX-export",
+        ]
+        _acc_opts_en = [
+            "🚀 Fast (5-8 min) — suitable for first impression",
+            "⚖️ Balanced (8-15 min) — recommended for planning",
+            "🎯 Accurate (15-25 min) — best quality, GPX export",
+        ]
+        _acc_opts = _acc_opts_nl if is_nl else _acc_opts_en
+        _acc_choice = st.radio(_acc_label, _acc_opts, index=1)
+        _acc_idx = _acc_opts.index(_acc_choice)
+        # Vertaal naar parameters: (dt_hours_override, DIRECTIONS_override, beam_w)
+        _acc_params = [
+            {"beam_w": 40,  "directions": 18, "note": "snel"},
+            {"beam_w": 60,  "directions": 24, "note": "gebalanceerd"},
+            {"beam_w": 100, "directions": 36, "note": "nauwkeurig"},
+        ][_acc_idx]
+        beam_w = _acc_params["beam_w"]
+
         search_clicked = st.form_submit_button(
             "🔍 Zoek havens" if is_nl else "🔍 Search ports",
             use_container_width=True
         )
 
     st.caption(
-        "⏱️ Rekentijd: 5–20 minuten afhankelijk van afstand en nauwkeurigheid. Bij korte routes (~100 NM) ca. 5 min, bij lange routes (>400 NM) kan dit oplopen tot 20 min."
+        "⏱️ Rekentijd afhankelijk van afstand en gekozen nauwkeurigheid. "
+        "Bij nauwkeurige berekening voor GPX-export: reken op 15-25 minuten voor lange routes."
         if is_nl else
-        "⏱️ Calculation time: 5–20 minutes depending on distance and accuracy. Short routes (~100 NM) approx. 5 min, long routes (>400 NM) may take up to 20 min."
+        "⏱️ Calculation time depends on distance and chosen accuracy. "
+        "For accurate calculation with GPX export: allow 15-25 minutes for long routes."
     )
 
     if search_clicked:
@@ -1995,15 +2052,16 @@ favourable heading *within* that corridor based on wind and current.
                 "lon":     chosen_e3["longitude"],
             }
             st.session_state["3b_calc"] = {
-                "la":       chosen_s3["latitude"],
-                "loa":      chosen_s3["longitude"],
-                "na":       chosen_s3["name"],
-                "lb":       chosen_e3["latitude"],
-                "lob":      chosen_e3["longitude"],
-                "nb":       chosen_e3["name"],
-                "dep_dt":   res["dep_dt"],
-                "boat_spd": res["boat_spd"],
-                "beam_w":   res["beam_w"],
+                "la":         chosen_s3["latitude"],
+                "loa":        chosen_s3["longitude"],
+                "na":         chosen_s3["name"],
+                "lb":         chosen_e3["latitude"],
+                "lob":        chosen_e3["longitude"],
+                "nb":         chosen_e3["name"],
+                "dep_dt":     res["dep_dt"],
+                "boat_spd":   res["boat_spd"],
+                "beam_w":     res["beam_w"],
+                "directions": res.get("directions", 24),
             }
             st.rerun()
 
@@ -2043,13 +2101,22 @@ favourable heading *within* that corridor based on wind and current.
 
         # ── Stap 2: weeroptimale routing binnen de corridor ──────────────────
         with st.spinner(""):
+            # Adaptieve tijdstap: korte routes nauwkeuriger, lange routes sneller
+            _ref_dist = haversine(la3, loa3, lb3, lob3)   # vogelvlucht als proxy
+            if _ref_dist < 80:
+                _dt = 1.0    # kort: 1-uurs stappen
+            elif _ref_dist < 250:
+                _dt = 1.5    # middel: 1.5 uur
+            else:
+                _dt = 2.0    # lang: 2-uurs stappen
             iso_path = isochrone_router(
                 la3, loa3, lb3, lob3,
                 dep_dt=dep_dt3,
                 boat_spd_kt=bspd3,
                 max_days=7,
-                dt_hours=2.0,
+                dt_hours=_dt,
                 beam_width=p3["beam_w"],
+                directions=p3.get("directions", 24),
                 corridor=corridor or None,
                 progress_cb=_progress,
             )
@@ -2899,29 +2966,12 @@ elif app_mode == t["m6"]:
     st.markdown(
         f"""
         <a href="https://ko-fi.com/sailingplanner" target="_blank" style="text-decoration:none;">
-          <div style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            background: linear-gradient(135deg, #FF5E5B 0%, #ff914d 100%);
-            color: white;
-            border-radius: 14px;
-            padding: 18px 28px;
-            font-family: sans-serif;
-            box-shadow: 0 4px 14px rgba(255,94,91,0.40);
-            cursor: pointer;
-            transition: opacity .2s;
-            max-width: 480px;
-            margin: 12px auto;
-          ">
-            <span style="font-size: 2.4rem; line-height:1;">☕</span>
-            <div>
-              <div style="font-size: 1.15rem; font-weight: 700; letter-spacing:.3px;">
-                {kofi_label}
-              </div>
-
-            </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;
+            background:linear-gradient(135deg,#FF5E5B 0%,#ff914d 100%);
+            color:white;border-radius:14px;padding:20px 32px;font-family:sans-serif;
+            box-shadow:0 4px 14px rgba(255,94,91,0.40);max-width:480px;margin:12px auto;">
+            <span style="font-size:2.2rem;line-height:1;">☕</span>
+            <span style="font-size:1.1rem;font-weight:700;letter-spacing:.3px;">{kofi_label}</span>
           </div>
         </a>
         """,
