@@ -2961,7 +2961,7 @@ elif app_mode == t["m6"]:
     st.markdown("---")
 
     # Prominente Ko-fi knop via gestylde HTML (past in elk Streamlit-thema)
-    kofi_label  = "☕ Steun de ontwikkeling via Ko-fi!" if is_nl else "☕ Support the development via Ko-fi!"
+    kofi_label  = "☕ Steun het beheer en de ontwikkeling via Ko-fi!" if is_nl else "☕ Support the maintenance & development via Ko-fi!"
     kofi_sub    = ""
     st.markdown(
         f"""
