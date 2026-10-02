@@ -10,7 +10,7 @@ import searoute as sr
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-st.set_page_config(page_title="Sailing & Marine Weather Historian Pro", layout="wide")
+st.set_page_config(page_title="Sailplan", layout="wide")
 
 st.markdown(
     """
@@ -27,7 +27,7 @@ with st.sidebar:
 is_nl = "Nederlands" in lang
 
 t = {
-    "title":    "⛵ Sailing Weather & Marine History Planner",
+    "title":    "⛵ Sailplan",
     "subtitle": (
         "Geavanceerde tochtplanning met automatische maritieme water-routing, "
         "getijdenstroom (+/- Oost/West as), getijhoogte in decimeters (dm) en GPX-export."
@@ -669,27 +669,40 @@ def fetch_combined_history(lat, lon, start_str, end_str):
     df["precipitation"]= df_w["precipitation"].fillna(0) if "precipitation" in df_w else 0.0
     return df
 
+def _get_with_retry(url, params, timeout=25, retries=2):
+    """Voert een GET-request uit met automatische retry bij timeout."""
+    for attempt in range(retries):
+        try:
+            return requests.get(url, params=params, timeout=timeout).json()
+        except requests.exceptions.Timeout:
+            if attempt == retries - 1:
+                raise
+        except Exception:
+            raise
+    return {}
+
+
 @st.cache_data
 def fetch_forecast_and_tides(lat, lon):
     df_w = pd.DataFrame()
     df_m = pd.DataFrame()
     try:
-        r = requests.get("https://api.open-meteo.com/v1/forecast", params={
+        r = _get_with_retry("https://api.open-meteo.com/v1/forecast", params={
             "latitude": lat, "longitude": lon, "forecast_days": 14,
             "hourly": ["wind_speed_10m","wind_gusts_10m","wind_direction_10m",
                        "temperature_2m","precipitation"],
             "wind_speed_unit": "kn", "timezone": "auto"
-        }, timeout=15).json()
+        }, timeout=25).json()
         df_w = pd.DataFrame(r.get("hourly", {}))
     except Exception as e:
         st.warning(f"Verwachtingsdata ophalen mislukt: {e}")
     try:
-        r = requests.get("https://marine-api.open-meteo.com/v1/marine", params={
+        r = _get_with_retry("https://marine-api.open-meteo.com/v1/marine", params={
             "latitude": lat, "longitude": lon, "forecast_days": 14,
             "hourly": ["wave_height","ocean_current_velocity",
                        "ocean_current_direction","sea_level_height_msl"],
             "timezone": "auto"
-        }, timeout=15).json()
+        }, timeout=25).json()
         df_m = pd.DataFrame(r.get("hourly", {}))
     except Exception:
         pass
@@ -725,7 +738,7 @@ def fetch_weather_grid(lat, lon):
     df_w = pd.DataFrame()
     df_m = pd.DataFrame()
     try:
-        r = requests.get("https://api.open-meteo.com/v1/forecast", params={
+        r = _get_with_retry("https://api.open-meteo.com/v1/forecast", params={
             "latitude": lat, "longitude": lon, "forecast_days": 7,
             "hourly": ["wind_speed_10m", "wind_direction_10m"],
             "wind_speed_unit": "kn", "timezone": "UTC"
@@ -736,7 +749,7 @@ def fetch_weather_grid(lat, lon):
     except Exception:
         pass
     try:
-        r = requests.get("https://marine-api.open-meteo.com/v1/marine", params={
+        r = _get_with_retry("https://marine-api.open-meteo.com/v1/marine", params={
             "latitude": lat, "longitude": lon, "forecast_days": 7,
             "hourly": ["ocean_current_velocity", "ocean_current_direction"],
             "timezone": "UTC"
@@ -1176,14 +1189,14 @@ if app_mode == t["m0"]:
     # ── Welkomspagina ─────────────────────────────────────────────────────────
     if is_nl:
         st.markdown("""
-### Welkom bij de Sailing Weather & Marine History Planner
+### Welkom bij Sailplan
 
 Deze app helpt je bij het plannen van een zeilreis — van een eerste indruk van het
 beste seizoen tot een volledig weergestuurde routeoptimalisatie.
 """)
     else:
         st.markdown("""
-### Welcome to the Sailing Weather & Marine History Planner
+### Welcome to Sailplan
 
 This app helps you plan a sailing passage — from a first impression of the best season
 to a fully weather-optimised route calculation.
@@ -1536,6 +1549,22 @@ elif app_mode == t["m3"]:
             dep_date = st.date_input(t["m3_dep_date"], value=datetime.now().date())
         with ct2:
             dep_time_val = st.time_input(t["m3_dep_time"], value=datetime.now().time())
+        st.markdown("---")
+        _m3_acc_label = "Routenauwkeurigheid" if is_nl else "Route accuracy"
+        _m3_acc_opts_nl = [
+            "🚀 Snel (30-60 sec) — 50 waypoints, eerste indruk",
+            "⚖️ Gebalanceerd (60-90 sec) — 100 waypoints, aanbevolen",
+            "🎯 Nauwkeurig (2-4 min) — 200 waypoints, GPX-export",
+        ]
+        _m3_acc_opts_en = [
+            "🚀 Fast (30-60 sec) — 50 waypoints, first impression",
+            "⚖️ Balanced (60-90 sec) — 100 waypoints, recommended",
+            "🎯 Accurate (2-4 min) — 200 waypoints, GPX export",
+        ]
+        _m3_acc_opts = _m3_acc_opts_nl if is_nl else _m3_acc_opts_en
+        _m3_acc_choice = st.radio(_m3_acc_label, _m3_acc_opts, index=1)
+        _m3_target_wp  = [50, 100, 200][_m3_acc_opts.index(_m3_acc_choice)]
+
         submitted = st.form_submit_button(t["m3_search_btn"], use_container_width=True)
 
     if submitted:
@@ -1547,6 +1576,7 @@ elif app_mode == t["m3"]:
             "r_boat_spd": boat_spd,
             "r_dep_dt": datetime.combine(dep_date, dep_time_val),
             "r_calc": False,
+            "m3_target_wp": _m3_target_wp,
         })
 
     if st.session_state.get("r_search_done"):
@@ -1584,10 +1614,10 @@ elif app_mode == t["m3"]:
                 "lon":     chosen_end["longitude"],
             }
         st.caption(
-            "⏱️ Eerste berekening duurt doorgaans 45–90 seconden (100 waypoints × weersdata). "
-            "Een herberekening van dezelfde route is direct klaar door de cache."
+            "⏱️ Snelheid hangt af van afstand en gekozen nauwkeurigheid. "
+            "Herberekening van dezelfde route is direct klaar door de cache."
             if is_nl else
-            "⏱️ First calculation typically takes 45–90 seconds (100 waypoints × weather data). "
+            "⏱️ Speed depends on distance and chosen accuracy. "
             "Recalculating the same route is instant thanks to caching."
         )
 
@@ -1616,7 +1646,7 @@ elif app_mode == t["m3"]:
                 st.error(f"{t['m3_route_error']} {e}"); st.stop()
 
             pts_raw = [[c[1],c[0]] for c in coords_raw]
-            TARGET_WP = 100
+            TARGET_WP = st.session_state.get("m3_target_wp", 100)
             APPROACH_PTS = 8   # punten voor haven-benadering aan start én eind
 
             # ── Stap 1: gelijkmatig verdelen over de SeaRoute-knooppunten ───
@@ -1693,11 +1723,16 @@ elif app_mode == t["m3"]:
             pts = start_approach + pts_smooth + end_approach
 
             hrs_seg = (dist_nm/b_spd)/(len(pts)-1) if len(pts)>1 else 0
-            route_data = []
-            for i,(lt,ln) in enumerate(pts):
+
+            # ── Parallel weersdata ophalen per waypoint ───────────────────────
+            def _fetch_wp(args):
+                i, (lt, ln) = args
                 wp_name = f"WP {i+1}" if 0 < i < len(pts)-1 else (na if i==0 else nb)
                 arr_t   = dep_dt + timedelta(hours=i*hrs_seg)
-                df_wp   = fetch_forecast_and_tides(lt, ln)
+                try:
+                    df_wp = fetch_forecast_and_tides(lt, ln)
+                except Exception:
+                    df_wp = pd.DataFrame()
 
                 cv_v = ce_v = card_v = None
                 wind_v = wave_v = tide_v = None
@@ -1717,10 +1752,10 @@ elif app_mode == t["m3"]:
                         cv_v, ce_v = spd, e_c
                     wind_v = row.get("wind_speed_10m", None)
                     wave_v = row.get("wave_height", None)
-                    rt = row.get("tide_dm", None)
+                    rt     = row.get("tide_dm", None)
                     tide_v = None if (rt is None or pd.isna(rt)) else float(rt)
 
-                route_data.append({
+                return (i, {
                     t["m3_col_wp"]:      wp_name,
                     t["m3_col_lat"]:     round(float(lt),4),
                     t["m3_col_lon"]:     round(float(ln),4),
@@ -1733,6 +1768,11 @@ elif app_mode == t["m3"]:
                     t["m3_col_wave"]:    round(float(wave_v),2) if wave_v is not None else "n/a",
                     t["m3_col_src"]:     src_v,
                 })
+
+            with ThreadPoolExecutor(max_workers=10) as _ex:
+                wp_results = list(_ex.map(_fetch_wp, enumerate(pts)))
+            wp_results.sort(key=lambda x: x[0])
+            route_data = [r[1] for r in wp_results]
             df_route = pd.DataFrame(route_data)
 
         # ── Reistijd berekening ───────────────────────────────────────────────
@@ -1868,7 +1908,7 @@ The orange line shows the smooth open-water route. The blue dotted lines show th
 
         b1, b2 = st.columns(2)
         with b1:
-            gpx = ('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1">\n  <trk>\n    <n>'
+            gpx = ('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Sailplan">\n  <trk>\n    <n>'
                    + na + ' to ' + nb + '</n>\n    <trkseg>\n'
                    + ''.join(f'      <trkpt lat="{lt}" lon="{ln}"></trkpt>\n' for lt,ln in pts)
                    + '    </trkseg>\n  </trk>\n</gpx>')
@@ -2576,7 +2616,7 @@ favourable heading *within* that corridor based on wind and current.
 
         # ── GPX export ────────────────────────────────────────────────────────
         gpx3_lines = ['<?xml version="1.0" encoding="UTF-8"?>',
-                      '<gpx version="1.1">',
+                      '<gpx version="1.1" creator="Sailplan">',
                       '  <trk>',
                       f'    <n>{na3} to {nb3} (weather-optimal)</n>',
                       '    <trkseg>']
@@ -2961,11 +3001,11 @@ elif app_mode == t["m6"]:
     st.markdown("---")
 
     # Prominente Ko-fi knop via gestylde HTML (past in elk Streamlit-thema)
-    kofi_label  = "☕ Steun het beheer en de ontwikkeling via Ko-fi!" if is_nl else "☕ Support the maintenance & development via Ko-fi!"
+    kofi_label  = "☕ Steun het beheer en ontwikkeling via Ko-fi!" if is_nl else "☕ Support the maintenance & development via Ko-fi!"
     kofi_sub    = ""
     st.markdown(
         f"""
-        <a href="https://ko-fi.com/sailingplanner" target="_blank" style="text-decoration:none;">
+        <a href="https://ko-fi.com/sailplan" target="_blank" style="text-decoration:none;">
           <div style="display:flex;align-items:center;justify-content:center;gap:16px;
             background:linear-gradient(135deg,#FF5E5B 0%,#ff914d 100%);
             color:white;border-radius:14px;padding:20px 32px;font-family:sans-serif;
