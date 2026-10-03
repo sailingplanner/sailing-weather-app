@@ -413,6 +413,183 @@ TSS_ZONES = {
             (57.20, 9.00),
         ],
     },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # NEDERLAND / NOORDZEE KUST (aanvullend)
+    # ══════════════════════════════════════════════════════════════════════════
+    "vlieland_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (53.30, 4.70), "zone_radius_nm":  9,
+        "cross_line": [(53.55, 4.45), (53.05, 4.95)],
+    },
+    "vlieland_north_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (53.55, 4.60), "zone_radius_nm":  7,
+        "cross_line": [(53.80, 4.60), (53.30, 4.60)],
+    },
+    "off_texel_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (53.00, 4.40), "zone_radius_nm":  8,
+        "cross_line": [(53.25, 4.15), (52.75, 4.65)],
+    },
+    "maas_northwest_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (52.00, 3.70), "zone_radius_nm":  9,
+        "cross_line": [(52.30, 3.40), (51.70, 4.00)],
+    },
+    "west_hinder_tss": {
+        "lane_bearing":  225, "cross_bearing": 135,
+        "zone_center":   (51.40, 2.30), "zone_radius_nm":  8,
+        "cross_line": [(51.65, 2.05), (51.15, 2.55)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # NOORWEGEN
+    # ══════════════════════════════════════════════════════════════════════════
+    "off_runde_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (62.40, 5.00), "zone_radius_nm": 10,
+        "cross_line": [(62.40, 4.60), (62.40, 5.40)],
+    },
+    "off_stad_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (62.10, 4.70), "zone_radius_nm":  9,
+        "cross_line": [(62.10, 4.30), (62.10, 5.10)],
+    },
+    "off_sotra_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (60.25, 4.60), "zone_radius_nm":  8,
+        "cross_line": [(60.25, 4.20), (60.25, 5.00)],
+    },
+    "north_cape_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (71.20, 25.80), "zone_radius_nm": 12,
+        "cross_line": [(71.50, 25.80), (70.90, 25.80)],
+    },
+    "rost_tss": {
+        "lane_bearing":  330, "cross_bearing":  60,
+        "zone_center":   (67.50, 11.50), "zone_radius_nm": 10,
+        "cross_line": [(67.80, 11.00), (67.20, 12.00)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # IJSLAND
+    # ══════════════════════════════════════════════════════════════════════════
+    "iceland_gardskagi_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (64.10, -22.80), "zone_radius_nm": 12,
+        "cross_line": [(64.40, -22.80), (63.80, -22.80)],
+    },
+    "iceland_reykjanes_tss": {
+        "lane_bearing":   90, "cross_bearing":   0,
+        "zone_center":   (63.60, -24.00), "zone_radius_nm": 12,
+        "cross_line": [(63.90, -24.00), (63.30, -24.00)],
+    },
+    "faxafloi_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (64.20, -23.20), "zone_radius_nm": 10,
+        "cross_line": [(64.20, -23.60), (64.20, -22.80)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # IERLAND / SCHOTLAND
+    # ══════════════════════════════════════════════════════════════════════════
+    "north_channel_tss": {
+        "lane_bearing":  210, "cross_bearing": 120,
+        "zone_center":   (55.20, -5.80), "zone_radius_nm": 10,
+        "cross_line": [(55.50, -6.10), (54.90, -5.50)],
+    },
+    "malin_head_tss": {
+        "lane_bearing":  250, "cross_bearing": 160,
+        "zone_center":   (55.50, -7.50), "zone_radius_nm":  9,
+        "cross_line": [(55.80, -7.70), (55.20, -7.30)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # ATLANTISCHE KUST — PORTUGAL / SPANJE
+    # ══════════════════════════════════════════════════════════════════════════
+    "cape_finisterre_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (42.90, -9.50), "zone_radius_nm": 12,
+        "cross_line": [(42.90, -9.90), (42.90, -9.10)],
+    },
+    "cape_st_vincent_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (36.80, -9.00), "zone_radius_nm": 12,
+        "cross_line": [(36.80, -9.50), (36.80, -8.50)],
+    },
+    "gibraltar_tss": {
+        "lane_bearing":   90, "cross_bearing":   0,
+        "zone_center":   (35.95, -5.60), "zone_radius_nm": 10,
+        "cross_line": [(36.20, -5.60), (35.70, -5.60)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # OOSTZEE
+    # ══════════════════════════════════════════════════════════════════════════
+    "north_rugen_tss": {
+        "lane_bearing":   90, "cross_bearing":   0,
+        "zone_center":   (54.80, 13.50), "zone_radius_nm":  8,
+        "cross_line": [(55.10, 13.50), (54.50, 13.50)],
+    },
+    "hoburgs_north_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (57.80, 19.20), "zone_radius_nm":  8,
+        "cross_line": [(57.80, 18.80), (57.80, 19.60)],
+    },
+    "hoburgs_south_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (57.20, 19.10), "zone_radius_nm":  8,
+        "cross_line": [(57.20, 18.70), (57.20, 19.50)],
+    },
+    "kattegat_north_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (57.40, 11.00), "zone_radius_nm":  9,
+        "cross_line": [(57.40, 10.60), (57.40, 11.40)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # CARIBISCH GEBIED
+    # ══════════════════════════════════════════════════════════════════════════
+    "mona_passage_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (18.20, -67.80), "zone_radius_nm": 12,
+        "cross_line": [(18.20, -68.20), (18.20, -67.40)],
+    },
+    "windward_passage_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (19.80, -74.10), "zone_radius_nm": 12,
+        "cross_line": [(19.80, -74.50), (19.80, -73.70)],
+    },
+    "yucatan_channel_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (21.50, -85.50), "zone_radius_nm": 12,
+        "cross_line": [(21.50, -85.90), (21.50, -85.10)],
+    },
+    "florida_strait_tss": {
+        "lane_bearing":   45, "cross_bearing": 135,
+        "zone_center":   (24.50, -80.50), "zone_radius_nm": 12,
+        "cross_line": [(24.80, -80.80), (24.20, -80.20)],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SPITSBERGEN / GROENLAND
+    # ══════════════════════════════════════════════════════════════════════════
+    "bear_island_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (74.50, 19.00), "zone_radius_nm": 12,
+        "cross_line": [(74.50, 18.50), (74.50, 19.50)],
+    },
+    "denmark_strait_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (66.00, -27.00), "zone_radius_nm": 15,
+        "cross_line": [(66.00, -27.60), (66.00, -26.40)],
+    },
+    "cape_farewell_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (59.50, -43.50), "zone_radius_nm": 12,
+        "cross_line": [(59.80, -43.50), (59.20, -43.50)],
+    },
 }
 
 
@@ -440,91 +617,98 @@ def _seg_intersects_zone(lat1, lon1, lat2, lon2, zone_center, zone_radius_nm):
 def apply_tss_corrections(pts_raw):
     """
     Controleert of de route TSS-zones kruist en voegt correcte
-    loodrechte kruisings-waypoints in waar nodig.
-    Geeft gecorrigeerde lijst van [lat, lon] terug.
+    loodrechte kruisings-waypoints in.
+
+    Aanpak:
+    - Bepaal per TSS-zone of de HELE route (als lijn van start naar eind)
+      de zone kruist, door het dichtstbijzijnde punt van de route tot het
+      zonecentrum te berekenen.
+    - Per zone wordt MAXIMAAL ÉÉN paar entry/exit-waypoints ingevoegd,
+      op de positie in de route waar de route het dichtst bij het
+      zonecentrum komt. Dit voorkomt meervoudige of overlappende correcties.
+    - Entry/exit liggen op de loodrechte kruisingsas door het zonecentrum.
     """
     if len(pts_raw) < 2:
-        return pts_raw
+        return pts_raw, []
 
-    corrected = [pts_raw[0]]
     tss_warnings = []
+    # Verzamel: {zone_name: (beste_idx_in_route, entry_pt, exit_pt)}
+    corrections = {}
 
-    for i in range(len(pts_raw) - 1):
-        lat1, lon1 = pts_raw[i][0],   pts_raw[i][1]
-        lat2, lon2 = pts_raw[i+1][0], pts_raw[i+1][1]
+    # Bepaal overall vaarrichting (start → eind)
+    overall_lat1, overall_lon1 = pts_raw[0][0],  pts_raw[0][1]
+    overall_lat2, overall_lon2 = pts_raw[-1][0], pts_raw[-1][1]
+    overall_brg = (_tss_math.degrees(
+        _tss_math.atan2(overall_lon2 - overall_lon1,
+                        overall_lat2 - overall_lat1)) + 360) % 360
 
-        segment_corrections = []
+    for zone_name, zone in TSS_ZONES.items():
+        clat, clon = zone["zone_center"]
+        r_nm = zone["zone_radius_nm"]
 
-        for zone_name, zone in TSS_ZONES.items():
-            if not _seg_intersects_zone(lat1, lon1, lat2, lon2,
-                                         zone["zone_center"], zone["zone_radius_nm"]):
-                continue
+        # Zoek het punt in de route dat het dichtst bij het zonecentrum ligt
+        min_dist = float("inf")
+        best_idx = -1
+        for i, pt in enumerate(pts_raw):
+            d = haversine(pt[0], pt[1], clat, clon)
+            if d < min_dist:
+                min_dist = d
+                best_idx = i
 
-            clat, clon = zone["zone_center"]
-            cross_brg  = zone["cross_bearing"]
-            r_nm       = zone["zone_radius_nm"]
+        # Zone wordt alleen gecorrigeerd als de route erdoorheen gaat
+        if min_dist > r_nm:
+            continue
 
-            # Bereken instap- en uitstappunt langs de loodrechte koers
-            # door het zonecentrum
-            brg_r = _tss_math.radians(cross_brg)
+        # Kies loodrechte kruisingsrichting passend bij de vaarrichting
+        cross_a = zone["cross_bearing"]
+        cross_b = (cross_a + 180) % 360
+        diff_a  = abs((cross_a - overall_brg + 180) % 360 - 180)
+        diff_b  = abs((cross_b - overall_brg + 180) % 360 - 180)
+        chosen_cross = cross_a if diff_a < diff_b else cross_b
+        chosen_r     = _tss_math.radians(chosen_cross)
+        cos_lat      = max(0.01, _tss_math.cos(_tss_math.radians(clat)))
 
-            # Instappunt: r_nm vóór het centrum (richting van lat1,lon1)
-            # Bepaal of we van N of Z/O of W komen
-            bearing_to_center = _tss_math.degrees(
-                _tss_math.atan2(
-                    _tss_math.sin(_tss_math.radians(clon - lon1)) *
-                    _tss_math.cos(_tss_math.radians(clat)),
-                    _tss_math.cos(_tss_math.radians(lat1)) *
-                    _tss_math.sin(_tss_math.radians(clat)) -
-                    _tss_math.sin(_tss_math.radians(lat1)) *
-                    _tss_math.cos(_tss_math.radians(clat)) *
-                    _tss_math.cos(_tss_math.radians(clon - lon1))
-                )
-            ) % 360
+        # Entry = r_nm vóór centrum langs de kruisingsas
+        entry_lat = clat - (r_nm / 60) * _tss_math.cos(chosen_r)
+        entry_lon = clon - (r_nm / 60) * _tss_math.sin(chosen_r) / cos_lat
+        # Exit  = r_nm ná centrum
+        exit_lat  = clat + (r_nm / 60) * _tss_math.cos(chosen_r)
+        exit_lon  = clon + (r_nm / 60) * _tss_math.sin(chosen_r) / cos_lat
 
-            # Kies de loodrechte kruisingsrichting die het dichtst bij
-            # de huidige koers ligt
-            current_brg = _tss_math.degrees(
-                _tss_math.atan2(lon2 - lon1, lat2 - lat1)
-            ) % 360
-            cross_a = zone["cross_bearing"]
-            cross_b = (cross_a + 180) % 360
-            diff_a  = abs((cross_a - current_brg + 180) % 360 - 180)
-            diff_b  = abs((cross_b - current_brg + 180) % 360 - 180)
-            chosen_cross = cross_a if diff_a < diff_b else cross_b
-            chosen_r     = _tss_math.radians(chosen_cross)
+        # Zorg dat entry aan de kant van de start ligt
+        d_entry_start = haversine(entry_lat, entry_lon, overall_lat1, overall_lon1)
+        d_exit_start  = haversine(exit_lat,  exit_lon,  overall_lat1, overall_lon1)
+        if d_entry_start > d_exit_start:
+            entry_lat, entry_lon, exit_lat, exit_lon =                 exit_lat, exit_lon, entry_lat, entry_lon
 
-            # Entry point: r_nm voor het centrum
-            entry_lat = clat - (r_nm / 60) * _tss_math.cos(chosen_r)
-            entry_lon = clon - (r_nm / 60) * _tss_math.sin(chosen_r) / max(
-                0.01, _tss_math.cos(_tss_math.radians(clat)))
+        corrections[zone_name] = (best_idx, [entry_lat, entry_lon], [exit_lat, exit_lon])
+        tss_warnings.append(zone_name)
 
-            # Exit point: r_nm na het centrum
-            exit_lat = clat + (r_nm / 60) * _tss_math.cos(chosen_r)
-            exit_lon = clon + (r_nm / 60) * _tss_math.sin(chosen_r) / max(
-                0.01, _tss_math.cos(_tss_math.radians(clat)))
+    if not corrections:
+        return pts_raw, []
 
-            # Zorg dat entry dichter bij lat1 ligt dan exit
-            if haversine(entry_lat, entry_lon, lat2, lon2) < haversine(exit_lat, exit_lon, lat2, lon2):
-                entry_lat, entry_lon, exit_lat, exit_lon = exit_lat, exit_lon, entry_lat, entry_lon
+    # Voeg correcties in op de juiste positie in de route (gesorteerd op idx)
+    # Bouw nieuwe route op: voor elk correctiepunt vervangen we de buurt
+    # van dat punt door entry → exit
+    sorted_corr = sorted(corrections.values(), key=lambda x: x[0])
 
-            segment_corrections.append((
-                haversine(lat1, lon1, entry_lat, entry_lon),
-                [entry_lat, entry_lon],
-                [exit_lat,  exit_lon],
-                zone_name,
-            ))
-            tss_warnings.append(zone_name)
+    # Herbouw de puntenlijst: houd originele punten maar vervang het
+    # dichtstbijzijnde punt per zone door entry+exit
+    used_indices = set()
+    insertions = {}  # idx → [entry_pt, exit_pt]
+    for idx, entry_pt, exit_pt in sorted_corr:
+        insertions[idx] = (entry_pt, exit_pt)
+        used_indices.add(idx)
 
-        # Sorteer correcties op afstand van lat1 en voeg in
-        segment_corrections.sort(key=lambda x: x[0])
-        for _, entry_pt, exit_pt, _ in segment_corrections:
-            corrected.append(entry_pt)
-            corrected.append(exit_pt)
+    result = []
+    for i, pt in enumerate(pts_raw):
+        if i in insertions:
+            result.append(insertions[i][0])  # entry
+            result.append(insertions[i][1])  # exit
+        else:
+            result.append(pt)
 
-        corrected.append([lat2, lon2])
-
-    return corrected, list(set(tss_warnings))
+    return result, tss_warnings
 
 
 GLOBAL_CURRENT_ATLAS = {
