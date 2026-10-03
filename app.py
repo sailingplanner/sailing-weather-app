@@ -271,6 +271,262 @@ def degrees_to_cardinal(d, nl=True):
 # Voor gebieden zonder getij wordt een constante reststroming gebruikt;
 # vloed/ebb worden dan beide op dezelfde richting gezet (getij-onafhankelijk).
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# TRAFFIC SEPARATION SCHEMES (TSS) — COLREG Regel 10
+# Bron: IMO Ships' Routeing, NtM / UKHO / Rijkswaterstaat
+#
+# Recreatievaart MOET TSS-zones loodrecht kruisen.
+# Structuur per zone:
+#   "naam": {
+#       "lane_bearing": richting van het verkeer in de lane (graden),
+#       "cross_bearing": loodrechte kruisingskoers (lane_bearing ± 90°),
+#       "entry_pts":  lijst van (lat, lon) kruisingslijnen van NO→ZW of N→Z
+#       "width_nm":   breedte van de zone in zeemijlen
+#   }
+#
+# Implementatie: als een route de zone kruist, worden de waypoints vervangen
+# door twee punten: instappunt + uitstappunt langs de loodrechte koers.
+# ══════════════════════════════════════════════════════════════════════════════
+import math as _tss_math
+
+TSS_ZONES = {
+    # ── Dover Strait / Pas de Calais ────────────────────────────────────────
+    # Drukste scheepvaartroute ter wereld. NE-SW lanes, loodrecht = NW-SE (135°/315°)
+    "dover_strait": {
+        "lane_bearing":  225,    # schepen varen NE of SW
+        "cross_bearing":  135,   # recreatie kruist op 135° (ZO) of 315° (NW)
+        "zone_center":   (51.05, 1.60),   # midden Pas de Calais
+        "zone_radius_nm": 12,
+        "cross_line": [          # loodrechte kruisingsas (punten N→Z langs 1.60°E)
+            (51.30, 1.60),
+            (50.80, 1.60),
+        ],
+    },
+    # ── Noord-Hinder Junction ───────────────────────────────────────────────
+    # Knooppunt Noordzee, ca. 51.5N 2.5E. NE/SW en N/Z lanes
+    "noord_hinder": {
+        "lane_bearing":  45,
+        "cross_bearing": 135,
+        "zone_center":   (51.50, 2.50),
+        "zone_radius_nm": 10,
+        "cross_line": [
+            (51.80, 2.50),
+            (51.20, 2.50),
+        ],
+    },
+    # ── IJmuiden TSS (Zee/Kust bij IJmuiden) ────────────────────────────────
+    "ijmuiden_tss": {
+        "lane_bearing":  270,    # oost-west langs kust
+        "cross_bearing":   0,    # loodrecht = N-Z
+        "zone_center":   (52.45, 4.25),
+        "zone_radius_nm":  8,
+        "cross_line": [
+            (52.70, 4.25),
+            (52.20, 4.25),
+        ],
+    },
+    # ── Texel TSS ───────────────────────────────────────────────────────────
+    "texel_tss": {
+        "lane_bearing":  350,
+        "cross_bearing":  80,
+        "zone_center":   (53.10, 4.50),
+        "zone_radius_nm":  8,
+        "cross_line": [
+            (53.30, 4.10),
+            (52.90, 4.90),
+        ],
+    },
+    # ── Terschelling / German Bight Westbound ───────────────────────────────
+    "terschelling_tss": {
+        "lane_bearing":  270,
+        "cross_bearing":   0,
+        "zone_center":   (53.50, 4.80),
+        "zone_radius_nm": 10,
+        "cross_line": [
+            (53.75, 4.80),
+            (53.25, 4.80),
+        ],
+    },
+    # ── Off Frisian Islands (Borkum/Elbe) ───────────────────────────────────
+    "frisian_tss": {
+        "lane_bearing":  90,
+        "cross_bearing":   0,
+        "zone_center":   (54.00, 6.50),
+        "zone_radius_nm": 10,
+        "cross_line": [
+            (54.30, 6.50),
+            (53.70, 6.50),
+        ],
+    },
+    # ── South Falls / Off Lowestoft ─────────────────────────────────────────
+    "south_falls": {
+        "lane_bearing":  20,
+        "cross_bearing": 110,
+        "zone_center":   (52.10, 2.00),
+        "zone_radius_nm":  8,
+        "cross_line": [
+            (52.40, 1.70),
+            (51.80, 2.30),
+        ],
+    },
+    # ── Off Lands End / Isles of Scilly ────────────────────────────────────
+    "lands_end_tss": {
+        "lane_bearing":  60,     # NE-SW Kanaal uitloop
+        "cross_bearing": 150,
+        "zone_center":   (49.90, -6.50),
+        "zone_radius_nm": 12,
+        "cross_line": [
+            (50.20, -6.80),
+            (49.60, -6.20),
+        ],
+    },
+    # ── Ushant / Ouessant TSS (Atlantische ingang Kanaal) ───────────────────
+    "ushant_tss": {
+        "lane_bearing":  60,
+        "cross_bearing": 150,
+        "zone_center":   (48.50, -5.50),
+        "zone_radius_nm": 15,
+        "cross_line": [
+            (48.90, -5.90),
+            (48.10, -5.10),
+        ],
+    },
+    # ── Casquets TSS (NW Normandie / Channel Islands) ───────────────────────
+    "casquets_tss": {
+        "lane_bearing":  75,
+        "cross_bearing": 165,
+        "zone_center":   (49.80, -2.50),
+        "zone_radius_nm": 10,
+        "cross_line": [
+            (50.10, -2.70),
+            (49.50, -2.30),
+        ],
+    },
+    # ── Skagerrak (Noorwegen/Denemarken) ────────────────────────────────────
+    "skagerrak_tss": {
+        "lane_bearing":  270,
+        "cross_bearing":   0,
+        "zone_center":   (57.50, 9.00),
+        "zone_radius_nm": 10,
+        "cross_line": [
+            (57.80, 9.00),
+            (57.20, 9.00),
+        ],
+    },
+}
+
+
+def _point_to_segment_dist_nm(px, py, ax, ay, bx, by):
+    """Afstand van punt (px,py) tot lijnstuk (ax,ay)-(bx,by) in NM."""
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return haversine(px, py, ax, ay)
+    t = max(0, min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy)))
+    return haversine(px, py, ax + t*dx, ay + t*dy)
+
+
+def _seg_intersects_zone(lat1, lon1, lat2, lon2, zone_center, zone_radius_nm):
+    """Controleert of lijnstuk (lat1,lon1)-(lat2,lon2) door de TSS-zone gaat."""
+    clat, clon = zone_center
+    # Check meerdere punten langs het segment
+    for frac in [0.0, 0.25, 0.5, 0.75, 1.0]:
+        slat = lat1 + frac * (lat2 - lat1)
+        slon = lon1 + frac * (lon2 - lon1)
+        if haversine(slat, slon, clat, clon) <= zone_radius_nm:
+            return True
+    return False
+
+
+def apply_tss_corrections(pts_raw):
+    """
+    Controleert of de route TSS-zones kruist en voegt correcte
+    loodrechte kruisings-waypoints in waar nodig.
+    Geeft gecorrigeerde lijst van [lat, lon] terug.
+    """
+    if len(pts_raw) < 2:
+        return pts_raw
+
+    corrected = [pts_raw[0]]
+    tss_warnings = []
+
+    for i in range(len(pts_raw) - 1):
+        lat1, lon1 = pts_raw[i][0],   pts_raw[i][1]
+        lat2, lon2 = pts_raw[i+1][0], pts_raw[i+1][1]
+
+        segment_corrections = []
+
+        for zone_name, zone in TSS_ZONES.items():
+            if not _seg_intersects_zone(lat1, lon1, lat2, lon2,
+                                         zone["zone_center"], zone["zone_radius_nm"]):
+                continue
+
+            clat, clon = zone["zone_center"]
+            cross_brg  = zone["cross_bearing"]
+            r_nm       = zone["zone_radius_nm"]
+
+            # Bereken instap- en uitstappunt langs de loodrechte koers
+            # door het zonecentrum
+            brg_r = _tss_math.radians(cross_brg)
+
+            # Instappunt: r_nm vóór het centrum (richting van lat1,lon1)
+            # Bepaal of we van N of Z/O of W komen
+            bearing_to_center = _tss_math.degrees(
+                _tss_math.atan2(
+                    _tss_math.sin(_tss_math.radians(clon - lon1)) *
+                    _tss_math.cos(_tss_math.radians(clat)),
+                    _tss_math.cos(_tss_math.radians(lat1)) *
+                    _tss_math.sin(_tss_math.radians(clat)) -
+                    _tss_math.sin(_tss_math.radians(lat1)) *
+                    _tss_math.cos(_tss_math.radians(clat)) *
+                    _tss_math.cos(_tss_math.radians(clon - lon1))
+                )
+            ) % 360
+
+            # Kies de loodrechte kruisingsrichting die het dichtst bij
+            # de huidige koers ligt
+            current_brg = _tss_math.degrees(
+                _tss_math.atan2(lon2 - lon1, lat2 - lat1)
+            ) % 360
+            cross_a = zone["cross_bearing"]
+            cross_b = (cross_a + 180) % 360
+            diff_a  = abs((cross_a - current_brg + 180) % 360 - 180)
+            diff_b  = abs((cross_b - current_brg + 180) % 360 - 180)
+            chosen_cross = cross_a if diff_a < diff_b else cross_b
+            chosen_r     = _tss_math.radians(chosen_cross)
+
+            # Entry point: r_nm voor het centrum
+            entry_lat = clat - (r_nm / 60) * _tss_math.cos(chosen_r)
+            entry_lon = clon - (r_nm / 60) * _tss_math.sin(chosen_r) / max(
+                0.01, _tss_math.cos(_tss_math.radians(clat)))
+
+            # Exit point: r_nm na het centrum
+            exit_lat = clat + (r_nm / 60) * _tss_math.cos(chosen_r)
+            exit_lon = clon + (r_nm / 60) * _tss_math.sin(chosen_r) / max(
+                0.01, _tss_math.cos(_tss_math.radians(clat)))
+
+            # Zorg dat entry dichter bij lat1 ligt dan exit
+            if haversine(entry_lat, entry_lon, lat2, lon2) < haversine(exit_lat, exit_lon, lat2, lon2):
+                entry_lat, entry_lon, exit_lat, exit_lon = exit_lat, exit_lon, entry_lat, entry_lon
+
+            segment_corrections.append((
+                haversine(lat1, lon1, entry_lat, entry_lon),
+                [entry_lat, entry_lon],
+                [exit_lat,  exit_lon],
+                zone_name,
+            ))
+            tss_warnings.append(zone_name)
+
+        # Sorteer correcties op afstand van lat1 en voeg in
+        segment_corrections.sort(key=lambda x: x[0])
+        for _, entry_pt, exit_pt, _ in segment_corrections:
+            corrected.append(entry_pt)
+            corrected.append(exit_pt)
+
+        corrected.append([lat2, lon2])
+
+    return corrected, list(set(tss_warnings))
+
+
 GLOBAL_CURRENT_ATLAS = {
     # ── Noord-Europa / NL kustwateren (HR33) ────────────────────────────────
     "waddenzee_west":     {"vloedstroom": (0.80, 80),  "ebbstroom": (0.70, 260)},
@@ -1646,6 +1902,21 @@ elif app_mode == t["m3"]:
                 st.error(f"{t['m3_route_error']} {e}"); st.stop()
 
             pts_raw = [[c[1],c[0]] for c in coords_raw]
+
+            # ── TSS-correctie: loodrechte kruising van verkeersseparatiestelsels ──
+            pts_raw, tss_hit = apply_tss_corrections(pts_raw)
+            if tss_hit:
+                tss_names = ", ".join(tss_hit)
+                st.info(
+                    f"🚢 **TSS-correctie toegepast:** De route kruiste "
+                    f"{len(tss_hit)} verkeersseparatiestelsel(s) ({tss_names}). "
+                    f"Waypoints zijn aangepast voor een loodrechte kruising conform COLREG regel 10."
+                    if is_nl else
+                    f"🚢 **TSS correction applied:** The route crossed "
+                    f"{len(tss_hit)} traffic separation scheme(s) ({tss_names}). "
+                    f"Waypoints adjusted for perpendicular crossing per COLREG rule 10."
+                )
+
             TARGET_WP = st.session_state.get("m3_target_wp", 100)
             APPROACH_PTS = 8   # punten voor haven-benadering aan start én eind
 
@@ -1903,6 +2174,16 @@ The orange line shows the smooth open-water route. The blue dotted lines show th
 
         folium.Marker([la,loa], popup=f"Start: {na}", icon=folium.Icon(color="green",icon="play")).add_to(cmap)
         folium.Marker([lb,lob], popup=f"End: {nb}",   icon=folium.Icon(color="red",  icon="flag")).add_to(cmap)
+        # TSS-zones als lichtblauwe cirkels op de kaart
+        for _zn, _zd in TSS_ZONES.items():
+            _zclat, _zclon = _zd["zone_center"]
+            _zr_m = _zd["zone_radius_nm"] * 1852
+            folium.Circle(
+                location=[_zclat, _zclon], radius=_zr_m,
+                color="#1565C0", fill=True, fill_color="#1565C0",
+                fill_opacity=0.07, weight=1, dash_array="4 4",
+                tooltip=f"TSS: {_zn.replace('_',' ').title()} — loodrecht kruisen (COLREG 10)",
+            ).add_to(cmap)
         folium.LayerControl().add_to(cmap)
         components.html(cmap._repr_html_(), height=550)
 
@@ -2117,7 +2398,28 @@ favourable heading *within* that corridor based on wind and current.
 
         # ── Stap 1: bouw bevaarbaar korridorgebied via SeaRoute ──────────────
         prog_bar.progress(5, text="SeaRoute-corridor ophalen..." if is_nl else "Fetching SeaRoute corridor...")
-        corridor, _ = build_searoute_corridor(la3, loa3, lb3, lob3, width_nm=40.0)
+        corridor, corridor_raw = build_searoute_corridor(la3, loa3, lb3, lob3, width_nm=40.0)
+
+        # TSS-correctie op corridorpunten: voeg loodrechte kruisingspunten toe
+        # aan de corridor zodat de isochrone-router ze als bevaarbaar herkent
+        if corridor_raw:
+            corridor_corrected, tss_hit_3b = apply_tss_corrections(corridor_raw)
+            if tss_hit_3b:
+                # Voeg TSS-kruisingsgebied toe aan corridor
+                GRID = 0.25
+                for pt in corridor_corrected:
+                    key = (round(pt[0] / GRID), round(pt[1] / GRID))
+                    corridor.add(key)
+                    # Ook een buffer van 1 cel rondom elk kruisingspunt
+                    for dlat in [-1, 0, 1]:
+                        for dlon in [-1, 0, 1]:
+                            corridor.add((key[0]+dlat, key[1]+dlon))
+                tss_names_3b = ", ".join(tss_hit_3b)
+                st.info(
+                    f"🚢 De corridor is aangepast voor loodrechte TSS-kruising: {tss_names_3b} (COLREG 10)."
+                    if is_nl else
+                    f"🚢 Corridor adjusted for perpendicular TSS crossing: {tss_names_3b} (COLREG 10)."
+                )
 
         if not corridor:
             st.warning(
