@@ -616,99 +616,120 @@ def _seg_intersects_zone(lat1, lon1, lat2, lon2, zone_center, zone_radius_nm):
 
 def apply_tss_corrections(pts_raw):
     """
-    Controleert of de route TSS-zones kruist en voegt correcte
-    loodrechte kruisings-waypoints in.
+    TSS-correctie voor recreatievaart (COLREG regel 10).
 
-    Aanpak:
-    - Bepaal per TSS-zone of de HELE route (als lijn van start naar eind)
-      de zone kruist, door het dichtstbijzijnde punt van de route tot het
-      zonecentrum te berekenen.
-    - Per zone wordt MAXIMAAL ÉÉN paar entry/exit-waypoints ingevoegd,
-      op de positie in de route waar de route het dichtst bij het
-      zonecentrum komt. Dit voorkomt meervoudige of overlappende correcties.
-    - Entry/exit liggen op de loodrechte kruisingsas door het zonecentrum.
+    Algoritme:
+    1. Bepaal voor elke TSS-zone of de route erdoorheen gaat
+       (dichtstbijzijnde routepunt ≤ zone-radius).
+    2. Negeer zones die te dicht bij start of eind liggen (< 5 NM)
+       — dat zijn havennadering-zones, geen open-zee kruisingen.
+    3. Fuseer zones waarvan de correctiepunten < MIN_MERGE_NM uit
+       elkaar liggen tot één gecombineerd kruisingspunt. Dit voorkomt
+       zigzag bij dicht bij elkaar liggende TSS-zones (bijv. Dover +
+       Noord-Hinder).
+    4. Voeg per (gefuseerde) zone één paar entry/exit-waypoints in
+       op de loodrechte kruisingsas.
     """
+    MIN_DIST_FROM_ENDPOINT_NM = 8.0   # negeer zones te dicht bij haven
+    MIN_MERGE_NM               = 18.0  # fuseer zones binnen deze afstand
+
     if len(pts_raw) < 2:
         return pts_raw, []
 
-    tss_warnings = []
-    # Verzamel: {zone_name: (beste_idx_in_route, entry_pt, exit_pt)}
-    corrections = {}
-
-    # Bepaal overall vaarrichting (start → eind)
-    overall_lat1, overall_lon1 = pts_raw[0][0],  pts_raw[0][1]
-    overall_lat2, overall_lon2 = pts_raw[-1][0], pts_raw[-1][1]
+    overall_lat1, overall_lon1 = float(pts_raw[0][0]),  float(pts_raw[0][1])
+    overall_lat2, overall_lon2 = float(pts_raw[-1][0]), float(pts_raw[-1][1])
     overall_brg = (_tss_math.degrees(
         _tss_math.atan2(overall_lon2 - overall_lon1,
                         overall_lat2 - overall_lat1)) + 360) % 360
+
+    # ── Stap 1: vind alle geraakt zones ──────────────────────────────────
+    candidates = []   # (best_idx, clat, clon, r_nm, cross_bearing, zone_name)
 
     for zone_name, zone in TSS_ZONES.items():
         clat, clon = zone["zone_center"]
         r_nm = zone["zone_radius_nm"]
 
-        # Zoek het punt in de route dat het dichtst bij het zonecentrum ligt
-        min_dist = float("inf")
-        best_idx = -1
-        for i, pt in enumerate(pts_raw):
-            d = haversine(pt[0], pt[1], clat, clon)
-            if d < min_dist:
-                min_dist = d
-                best_idx = i
-
-        # Zone wordt alleen gecorrigeerd als de route erdoorheen gaat
-        if min_dist > r_nm:
+        # Negeer zones te dicht bij start of eind
+        if (haversine(overall_lat1, overall_lon1, clat, clon) < MIN_DIST_FROM_ENDPOINT_NM or
+                haversine(overall_lat2, overall_lon2, clat, clon) < MIN_DIST_FROM_ENDPOINT_NM):
             continue
 
-        # Kies loodrechte kruisingsrichting passend bij de vaarrichting
-        cross_a = zone["cross_bearing"]
+        # Zoek dichtstbijzijnde routepunt
+        min_dist, best_idx = float("inf"), -1
+        for i, pt in enumerate(pts_raw):
+            d = haversine(float(pt[0]), float(pt[1]), clat, clon)
+            if d < min_dist:
+                min_dist, best_idx = d, i
+
+        if min_dist > r_nm:
+            continue   # route gaat er niet doorheen
+
+        candidates.append((best_idx, clat, clon, r_nm,
+                           zone["cross_bearing"], zone_name))
+
+    if not candidates:
+        return pts_raw, []
+
+    # Sorteer op positie in de route
+    candidates.sort(key=lambda x: x[0])
+
+    # ── Stap 2: fuseer dicht bij elkaar liggende zones ────────────────────
+    merged = []   # lijst van gekozen (best_idx, clat, clon, r_nm, cross_brg, names)
+    for cand in candidates:
+        idx, clat, clon, r_nm, cross_brg, zname = cand
+        if merged:
+            prev_idx, prev_clat, prev_clon, prev_r, prev_cross, prev_names = merged[-1]
+            dist_between = haversine(clat, clon, prev_clat, prev_clon)
+            if dist_between < MIN_MERGE_NM:
+                # Fuseer: gebruik gemiddelde positie, grootste radius,
+                # cross_bearing van de zone met de grotere radius
+                fused_lat  = (clat + prev_clat) / 2
+                fused_lon  = (clon + prev_clon) / 2
+                fused_r    = max(r_nm, prev_r)
+                fused_cross= cross_brg if r_nm >= prev_r else prev_cross
+                fused_idx  = (idx + prev_idx) // 2
+                fused_names= prev_names + [zname]
+                merged[-1] = (fused_idx, fused_lat, fused_lon,
+                              fused_r, fused_cross, fused_names)
+                continue
+        merged.append((idx, clat, clon, r_nm, cross_brg, [zname]))
+
+    # ── Stap 3: bereken entry/exit per (gefuseerde) zone ──────────────────
+    tss_warnings = []
+    insertions   = {}   # route-idx → (entry_pt, exit_pt)
+
+    for idx, clat, clon, r_nm, cross_brg, names in merged:
+        cross_a = cross_brg
         cross_b = (cross_a + 180) % 360
         diff_a  = abs((cross_a - overall_brg + 180) % 360 - 180)
         diff_b  = abs((cross_b - overall_brg + 180) % 360 - 180)
-        chosen_cross = cross_a if diff_a < diff_b else cross_b
-        chosen_r     = _tss_math.radians(chosen_cross)
-        cos_lat      = max(0.01, _tss_math.cos(_tss_math.radians(clat)))
+        chosen  = cross_a if diff_a < diff_b else cross_b
+        cr      = _tss_math.radians(chosen)
+        cos_lat = max(0.01, _tss_math.cos(_tss_math.radians(clat)))
 
-        # Entry = r_nm vóór centrum langs de kruisingsas
-        entry_lat = clat - (r_nm / 60) * _tss_math.cos(chosen_r)
-        entry_lon = clon - (r_nm / 60) * _tss_math.sin(chosen_r) / cos_lat
-        # Exit  = r_nm ná centrum
-        exit_lat  = clat + (r_nm / 60) * _tss_math.cos(chosen_r)
-        exit_lon  = clon + (r_nm / 60) * _tss_math.sin(chosen_r) / cos_lat
+        entry_lat = clat - (r_nm / 60) * _tss_math.cos(cr)
+        entry_lon = clon - (r_nm / 60) * _tss_math.sin(cr) / cos_lat
+        exit_lat  = clat + (r_nm / 60) * _tss_math.cos(cr)
+        exit_lon  = clon + (r_nm / 60) * _tss_math.sin(cr) / cos_lat
 
         # Zorg dat entry aan de kant van de start ligt
-        d_entry_start = haversine(entry_lat, entry_lon, overall_lat1, overall_lon1)
-        d_exit_start  = haversine(exit_lat,  exit_lon,  overall_lat1, overall_lon1)
-        if d_entry_start > d_exit_start:
+        if (haversine(entry_lat, entry_lon, overall_lat1, overall_lon1) >
+                haversine(exit_lat, exit_lon, overall_lat1, overall_lon1)):
             entry_lat, entry_lon, exit_lat, exit_lon =                 exit_lat, exit_lon, entry_lat, entry_lon
 
-        corrections[zone_name] = (best_idx, [entry_lat, entry_lon], [exit_lat, exit_lon])
-        tss_warnings.append(zone_name)
+        insertions[idx] = ([entry_lat, entry_lon], [exit_lat, exit_lon])
+        tss_warnings.extend(names)
 
-    if not corrections:
-        return pts_raw, []
-
-    # Voeg correcties in op de juiste positie in de route (gesorteerd op idx)
-    # Bouw nieuwe route op: voor elk correctiepunt vervangen we de buurt
-    # van dat punt door entry → exit
-    sorted_corr = sorted(corrections.values(), key=lambda x: x[0])
-
-    # Herbouw de puntenlijst: houd originele punten maar vervang het
-    # dichtstbijzijnde punt per zone door entry+exit
-    used_indices = set()
-    insertions = {}  # idx → [entry_pt, exit_pt]
-    for idx, entry_pt, exit_pt in sorted_corr:
-        insertions[idx] = (entry_pt, exit_pt)
-        used_indices.add(idx)
-
+    # ── Stap 4: bouw gecorrigeerde route ──────────────────────────────────
     result = []
     for i, pt in enumerate(pts_raw):
         if i in insertions:
-            result.append(insertions[i][0])  # entry
-            result.append(insertions[i][1])  # exit
+            result.append(insertions[i][0])   # entry
+            result.append(insertions[i][1])   # exit
         else:
             result.append(pt)
 
-    return result, tss_warnings
+    return result, list(set(tss_warnings))
 
 
 GLOBAL_CURRENT_ATLAS = {
@@ -2650,6 +2671,37 @@ favourable heading *within* that corridor based on wind and current.
         prog_bar.progress(100, text="✅ Klaar!" if is_nl else "✅ Done!")
         prog_text.empty()
         st.session_state["3b_running"] = False
+
+        # ── TSS-correctie op de uiteindelijke weergestuurde route ────────────
+        # De corridor zorgt dat de router er doorheen kan navigeren, maar
+        # apply_tss_corrections garandeert de exacte loodrechte kruising
+        # en fusioneert dicht bij elkaar liggende zones.
+        if iso_path and len(iso_path) >= 2:
+            iso_pts_raw = [[wp[0], wp[1]] for wp in iso_path]
+            iso_pts_corrected, tss_hit_post = apply_tss_corrections(iso_pts_raw)
+            if tss_hit_post:
+                # Herbouw iso_path met gecorrigeerde coördinaten
+                # Voeg de extra TSS-punten in als tussenliggende waypoints
+                # (zonder weersdata — die worden als "n/a" getoond)
+                corrected_path = []
+                orig_idx = 0
+                for i, pt in enumerate(iso_pts_corrected):
+                    if orig_idx < len(iso_path) and [iso_path[orig_idx][0], iso_path[orig_idx][1]] == pt:
+                        corrected_path.append(iso_path[orig_idx])
+                        orig_idx += 1
+                    else:
+                        # TSS-correctiepunt: voeg toe met lege weersdata
+                        corrected_path.append((pt[0], pt[1],
+                            iso_path[min(orig_idx, len(iso_path)-1)][2],
+                            0.0, 0.0, 0.0))
+                iso_path = corrected_path
+                st.info(
+                    f"🚢 TSS-correctie ook toegepast op weergestuurde route: "
+                    f"{', '.join(tss_hit_post)} — loodrechte kruising (COLREG 10)."
+                    if is_nl else
+                    f"🚢 TSS correction also applied to weather-optimised route: "
+                    f"{', '.join(tss_hit_post)} — perpendicular crossing (COLREG 10)."
+                )
 
         if not iso_path or len(iso_path) < 2:
             st.error(
