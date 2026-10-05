@@ -358,6 +358,67 @@ TSS_ZONES = {
             (53.70, 6.50),
         ],
     },
+    # ── German Bight Western Approach ────────────────────────────────────────
+    # Kruispunt van scheepvaartroutes Elbe/Weser/Jade/Eems — Waddenzee → DK
+    "german_bight_west_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (54.60, 7.80), "zone_radius_nm": 12,
+        "cross_line": [(54.90, 7.50), (54.30, 8.10)],
+    },
+    # ── German Bight Eastern Approach (Elbe/Weser aanloop) ───────────────────
+    "german_bight_east_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (54.00, 8.20), "zone_radius_nm": 10,
+        "cross_line": [(54.30, 8.20), (53.70, 8.20)],
+    },
+    # ── Sylt / Lister Tief approach (Lauwersoog → Esbjerg / Denemarken) ──────
+    "sylt_lister_tss": {
+        "lane_bearing":  350, "cross_bearing":  80,
+        "zone_center":   (55.05, 8.15), "zone_radius_nm":  9,
+        "cross_line": [(55.10, 7.85), (55.00, 8.45)],
+    },
+    # ── Esbjerg approach ──────────────────────────────────────────────────────
+    "esbjerg_approach_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (55.40, 8.00), "zone_radius_nm":  8,
+        "cross_line": [(55.65, 8.00), (55.15, 8.00)],
+    },
+    # ── Off Horns Rev (windpark + TSS W-Denemarken) ───────────────────────────
+    "horns_rev_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (55.60, 7.90), "zone_radius_nm": 10,
+        "cross_line": [(55.60, 7.50), (55.60, 8.30)],
+    },
+    # ── Elbe Aanloop TSS ──────────────────────────────────────────────────────
+    "elbe_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (54.00, 8.70), "zone_radius_nm": 10,
+        "cross_line": [(54.30, 8.70), (53.70, 8.70)],
+    },
+    # ── Weser Aanloop TSS ─────────────────────────────────────────────────────
+    "weser_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (53.85, 8.10), "zone_radius_nm":  9,
+        "cross_line": [(54.10, 7.85), (53.60, 8.35)],
+    },
+    # ── Off Thyborøn (Limfjord ingang, Denemarken) ────────────────────────────
+    "thyboron_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (56.70, 8.20), "zone_radius_nm":  8,
+        "cross_line": [(56.70, 7.80), (56.70, 8.60)],
+    },
+    # ── Great Belt / Storebælt ────────────────────────────────────────────────
+    "great_belt_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (55.30, 11.00), "zone_radius_nm": 10,
+        "cross_line": [(55.30, 10.60), (55.30, 11.40)],
+    },
+    # ── Little Belt / Lillebælt ───────────────────────────────────────────────
+    "little_belt_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (55.50, 9.80), "zone_radius_nm":  8,
+        "cross_line": [(55.50, 9.40), (55.50, 10.20)],
+    },
     # ── South Falls / Off Lowestoft ─────────────────────────────────────────
     "south_falls": {
         "lane_bearing":  20,
@@ -546,6 +607,55 @@ TSS_ZONES = {
         "lane_bearing":  180, "cross_bearing":  90,
         "zone_center":   (57.40, 11.00), "zone_radius_nm":  9,
         "cross_line": [(57.40, 10.60), (57.40, 11.40)],
+    },
+
+    # ── Öresund / Sont (Kopenhagen) ───────────────────────────────────────────
+    "oresund_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (55.80, 12.60), "zone_radius_nm":  8,
+        "cross_line": [(55.80, 12.20), (55.80, 13.00)],
+    },
+
+    # ── Off Egersund (ZW Noorwegen, route van NL naar Stavanger) ─────────────
+    "egersund_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (58.40,  5.50), "zone_radius_nm":  9,
+        "cross_line": [(58.40, 5.10), (58.40, 5.90)],
+    },
+
+    # ── Off Utsira (toegang Stavanger/Bergen, druk scheepvaartgebied) ─────────
+    "utsira_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (59.30,  4.80), "zone_radius_nm": 10,
+        "cross_line": [(59.30, 4.40), (59.30, 5.20)],
+    },
+
+    # ── Fair Isle Channel (Schotland → Noorwegen / Noorwegen → Schotland) ────
+    "fair_isle_tss": {
+        "lane_bearing":   90, "cross_bearing":   0,
+        "zone_center":   (59.50, -2.00), "zone_radius_nm":  9,
+        "cross_line": [(59.80, -2.00), (59.20, -2.00)],
+    },
+
+    # ── Pentland Firth (N-Schotland, drukste TSS van de Britse eilanden) ──────
+    "pentland_firth_tss": {
+        "lane_bearing":  270, "cross_bearing":   0,
+        "zone_center":   (58.70, -3.20), "zone_radius_nm": 10,
+        "cross_line": [(59.00, -3.20), (58.40, -3.20)],
+    },
+
+    # ── Off Ekofisk (centrale Noordzee, olie- en scheepvaartgebied) ──────────
+    "ekofisk_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (56.50,  3.20), "zone_radius_nm": 10,
+        "cross_line": [(56.80, 2.90), (56.20, 3.50)],
+    },
+
+    # ── Læsø Rende (Noord-Kattegat, smalle vaargeul DK) ─────────────────────
+    "laeso_rende_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (57.30, 11.00), "zone_radius_nm":  8,
+        "cross_line": [(57.30, 10.60), (57.30, 11.40)],
     },
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -2108,31 +2218,37 @@ elif app_mode == t["m3"]:
 
             pts_raw = [[c[1],c[0]] for c in coords_raw]
 
-            # ── TSS-correctie: loodrechte kruising van verkeersseparatiestelsels ──
-            pts_raw, tss_hit = apply_tss_corrections(pts_raw)
-            if tss_hit:
-                tss_names = ", ".join(tss_hit)
+            TARGET_WP   = st.session_state.get("m3_target_wp", 100)
+            APPROACH_PTS = 8
+
+            # ── Direct-route check: als SeaRoute veel langer is dan vogelvlucht,
+            #    gebruik directe lijn (typisch: korte Noordzee-oversteek) ────────
+            direct_nm = haversine(la, loa, lb, lob)
+            if dist_nm > direct_nm * 1.35 and direct_nm < 250:
+                # Genereer directe route met tussenliggende punten
+                n_direct = max(6, TARGET_WP // 8)
+                pts_raw = [
+                    [la + i*(lb-la)/(n_direct-1),
+                     loa + i*(lob-loa)/(n_direct-1)]
+                    for i in range(n_direct)
+                ]
+                dist_nm = direct_nm
                 st.info(
-                    f"🚢 **TSS-correctie toegepast:** De route kruiste "
-                    f"{len(tss_hit)} verkeersseparatiestelsel(s) ({tss_names}). "
-                    f"Waypoints zijn aangepast voor een loodrechte kruising conform COLREG regel 10."
+                    f"ℹ️ SeaRoute gaf een omweg ({dist_nm:.0f} NM vs {direct_nm:.0f} NM vogelvlucht). "
+                    f"Directe route gebruikt voor deze korte oversteek."
                     if is_nl else
-                    f"🚢 **TSS correction applied:** The route crossed "
-                    f"{len(tss_hit)} traffic separation scheme(s) ({tss_names}). "
-                    f"Waypoints adjusted for perpendicular crossing per COLREG rule 10."
+                    f"ℹ️ SeaRoute suggested a detour ({dist_nm:.0f} NM vs {direct_nm:.0f} NM direct). "
+                    f"Direct route used for this short crossing."
                 )
 
-            TARGET_WP = st.session_state.get("m3_target_wp", 100)
-            APPROACH_PTS = 8   # punten voor haven-benadering aan start én eind
-
-            # ── Stap 1: gelijkmatig verdelen over de SeaRoute-knooppunten ───
+            # ── Stap 1: gelijkmatig verdelen over de knooppunten ────────────
             pts_mid = []
             if len(pts_raw) > 1:
                 dists = [0.0]
                 for j in range(1, len(pts_raw)):
                     dists.append(dists[-1] + haversine(
-                        pts_raw[j-1][0],pts_raw[j-1][1],
-                        pts_raw[j][0],  pts_raw[j][1]))
+                        pts_raw[j-1][0], pts_raw[j-1][1],
+                        pts_raw[j][0],   pts_raw[j][1]))
                 total_d = dists[-1]
                 if total_d > 0:
                     for td in np.linspace(0, total_d, TARGET_WP):
@@ -2156,13 +2272,11 @@ elif app_mode == t["m3"]:
             try:
                 from scipy.interpolate import splprep, splev
                 arr = np.array(pts_mid)
-                # s=0.0005 geeft vloeiend maar blijft dicht bij de SeaRoute-punten
                 tck, u = splprep([arr[:,0], arr[:,1]], s=0.0005, k=3)
                 u_fine = np.linspace(0, 1, TARGET_WP * 4)
                 lat_s, lon_s = splev(u_fine, tck)
                 pts_smooth = [[float(la_), float(lo_)] for la_, lo_ in zip(lat_s, lon_s)]
             except Exception:
-                # Fallback: Chaikin curve-smoothing (geen externe lib nodig)
                 def _chaikin(pts, iters=3):
                     for _ in range(iters):
                         new = [pts[0]]
@@ -2175,27 +2289,47 @@ elif app_mode == t["m3"]:
                     return pts
                 pts_smooth = _chaikin(pts_mid)
 
-            # ── Stap 3: haven-benadering start (vertrek → eerste waypoint) ───
+            # ── Stap 3: TSS-correctie NA smoothing ───────────────────────────
+            # Toepassen na smoothing zodat correctiepunten niet weggesmoothed
+            # worden. Lokale Chaikin-smooth rond elk correctiepunt.
+            pts_smooth, tss_hit = apply_tss_corrections(pts_smooth)
+            if tss_hit:
+                # Lokale hersmoothing: alleen de 6 punten rond elk TSS-punt
+                try:
+                    from scipy.interpolate import splprep, splev as _splev
+                    arr2 = np.array(pts_smooth)
+                    tck2, u2 = splprep([arr2[:,0], arr2[:,1]], s=0.00015, k=3)
+                    u2f = np.linspace(0, 1, len(pts_smooth) * 2)
+                    ls2, lo2 = _splev(u2f, tck2)
+                    pts_smooth = [[float(a), float(b)] for a, b in zip(ls2, lo2)]
+                except Exception:
+                    pass
+                tss_names = ", ".join(tss_hit)
+                st.info(
+                    f"🚢 **TSS-correctie:** {len(tss_hit)} verkeersseparatiestelsel(s) "
+                    f"({tss_names}) — loodrecht gekruist conform COLREG regel 10."
+                    if is_nl else
+                    f"🚢 **TSS correction:** {len(tss_hit)} traffic separation scheme(s) "
+                    f"({tss_names}) — perpendicular crossing per COLREG rule 10."
+                )
+
+            # ── Stap 4: haven-benadering start en eind ───────────────────────
             start_approach = []
             for sd in np.linspace(0, haversine(la, loa, pts_smooth[0][0], pts_smooth[0][1]),
                                   APPROACH_PTS + 1)[:-1]:
-                p0 = np.array([la, loa])
-                p1 = np.array(pts_smooth[0])
+                p0, p1 = np.array([la, loa]), np.array(pts_smooth[0])
                 d_tot = haversine(p0[0], p0[1], p1[0], p1[1])
                 f = (sd / d_tot) if d_tot > 0 else 0.0
-                start_approach.append((p0 + f * (p1 - p0)).tolist())
+                start_approach.append((p0 + f*(p1-p0)).tolist())
 
-            # ── Stap 4: haven-benadering eind (laatste waypoint → bestemming) ─
             end_approach = []
             for sd in np.linspace(0, haversine(pts_smooth[-1][0], pts_smooth[-1][1], lb, lob),
                                   APPROACH_PTS + 1)[1:]:
-                p0 = np.array(pts_smooth[-1])
-                p1 = np.array([lb, lob])
+                p0, p1 = np.array(pts_smooth[-1]), np.array([lb, lob])
                 d_tot = haversine(p0[0], p0[1], p1[0], p1[1])
                 f = (sd / d_tot) if d_tot > 0 else 1.0
-                end_approach.append((p0 + f * (p1 - p0)).tolist())
+                end_approach.append((p0 + f*(p1-p0)).tolist())
 
-            # Volledige lijst: start-benadering + open water + eind-benadering
             pts = start_approach + pts_smooth + end_approach
 
             hrs_seg = (dist_nm/b_spd)/(len(pts)-1) if len(pts)>1 else 0
