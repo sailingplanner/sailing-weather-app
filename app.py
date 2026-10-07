@@ -651,6 +651,41 @@ TSS_ZONES = {
         "cross_line": [(56.80, 2.90), (56.20, 3.50)],
     },
 
+    # ── Off Egersund uitgebreid — Stavanger aanloop ───────────────────────────
+    "stavanger_approach_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (58.90,  5.00), "zone_radius_nm": 12,
+        "cross_line": [(58.90, 4.50), (58.90, 5.50)],
+    },
+
+    # ── Off Ålesund / Møre (tss midden-Noorwegen) ────────────────────────────
+    "more_tss": {
+        "lane_bearing":    0, "cross_bearing":  90,
+        "zone_center":   (62.50,  4.80), "zone_radius_nm": 12,
+        "cross_line": [(62.50, 4.30), (62.50, 5.30)],
+    },
+
+    # ── Centrale Noordzee / Forties oilfield (Edinburgh/Aberdeen route) ───────
+    "central_north_sea_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (57.50,  1.00), "zone_radius_nm": 12,
+        "cross_line": [(57.80, 0.70), (57.20, 1.30)],
+    },
+
+    # ── Off Skagen (Denemarken/Noorwegen, Göteborg aanloop) ──────────────────
+    "skagen_tss": {
+        "lane_bearing":  315, "cross_bearing":  45,
+        "zone_center":   (57.80,  9.80), "zone_radius_nm": 10,
+        "cross_line": [(58.10, 9.50), (57.50, 10.10)],
+    },
+
+    # ── Göteborg aanloop (Kattegat/Skagerrak overgang) ────────────────────────
+    "goteborg_approach_tss": {
+        "lane_bearing":  180, "cross_bearing":  90,
+        "zone_center":   (57.60, 11.50), "zone_radius_nm": 10,
+        "cross_line": [(57.60, 11.10), (57.60, 11.90)],
+    },
+
     # ── Læsø Rende (Noord-Kattegat, smalle vaargeul DK) ─────────────────────
     "laeso_rende_tss": {
         "lane_bearing":  180, "cross_bearing":  90,
@@ -728,33 +763,29 @@ def apply_tss_corrections(pts_raw):
     """
     TSS-correctie voor recreatievaart (COLREG regel 10).
 
-    Algoritme:
-    1. Bepaal voor elke TSS-zone of de route erdoorheen gaat
-       (dichtstbijzijnde routepunt ≤ zone-radius).
-    2. Negeer zones die te dicht bij start of eind liggen (< 5 NM)
-       — dat zijn havennadering-zones, geen open-zee kruisingen.
-    3. Fuseer zones waarvan de correctiepunten < MIN_MERGE_NM uit
-       elkaar liggen tot één gecombineerd kruisingspunt. Dit voorkomt
-       zigzag bij dicht bij elkaar liggende TSS-zones (bijv. Dover +
-       Noord-Hinder).
-    4. Voeg per (gefuseerde) zone één paar entry/exit-waypoints in
-       op de loodrechte kruisingsas.
+    Aanpak die X-vormen en zigzags voorkomt:
+    1. Zoek per TSS-zone het bereik van routepunten dat BINNEN de zone valt.
+    2. Vervang alle punten in dat bereik door precies twee punten:
+       entry_pt en exit_pt op de loodrechte kruisingsas.
+    3. Geen hersmoothing — de rechte lijn entry→exit IS de loodrechte kruising.
+    4. Zones te dicht bij start/eind worden genegeerd (havennaderingen).
+    5. Zones die minder dan MIN_MERGE_NM uit elkaar liggen worden gefuseerd.
     """
-    MIN_DIST_FROM_ENDPOINT_NM = 8.0   # negeer zones te dicht bij haven
-    MIN_MERGE_NM               = 18.0  # fuseer zones binnen deze afstand
+    MIN_DIST_FROM_ENDPOINT_NM = 10.0
+    MIN_MERGE_NM               = 20.0
 
     if len(pts_raw) < 2:
         return pts_raw, []
 
-    overall_lat1, overall_lon1 = float(pts_raw[0][0]),  float(pts_raw[0][1])
-    overall_lat2, overall_lon2 = float(pts_raw[-1][0]), float(pts_raw[-1][1])
+    pts = [list(p) for p in pts_raw]   # werk met kopiëen
+    overall_lat1, overall_lon1 = float(pts[0][0]),  float(pts[0][1])
+    overall_lat2, overall_lon2 = float(pts[-1][0]), float(pts[-1][1])
     overall_brg = (_tss_math.degrees(
         _tss_math.atan2(overall_lon2 - overall_lon1,
                         overall_lat2 - overall_lat1)) + 360) % 360
 
     # ── Stap 1: vind alle geraakt zones ──────────────────────────────────
-    candidates = []   # (best_idx, clat, clon, r_nm, cross_bearing, zone_name)
-
+    candidates = []
     for zone_name, zone in TSS_ZONES.items():
         clat, clon = zone["zone_center"]
         r_nm = zone["zone_radius_nm"]
@@ -764,82 +795,88 @@ def apply_tss_corrections(pts_raw):
                 haversine(overall_lat2, overall_lon2, clat, clon) < MIN_DIST_FROM_ENDPOINT_NM):
             continue
 
-        # Zoek dichtstbijzijnde routepunt
         min_dist, best_idx = float("inf"), -1
-        for i, pt in enumerate(pts_raw):
+        for i, pt in enumerate(pts):
             d = haversine(float(pt[0]), float(pt[1]), clat, clon)
             if d < min_dist:
                 min_dist, best_idx = d, i
 
         if min_dist > r_nm:
-            continue   # route gaat er niet doorheen
+            continue
 
         candidates.append((best_idx, clat, clon, r_nm,
                            zone["cross_bearing"], zone_name))
 
     if not candidates:
-        return pts_raw, []
+        return pts, []
 
-    # Sorteer op positie in de route
     candidates.sort(key=lambda x: x[0])
 
     # ── Stap 2: fuseer dicht bij elkaar liggende zones ────────────────────
-    merged = []   # lijst van gekozen (best_idx, clat, clon, r_nm, cross_brg, names)
+    merged = []
     for cand in candidates:
         idx, clat, clon, r_nm, cross_brg, zname = cand
         if merged:
-            prev_idx, prev_clat, prev_clon, prev_r, prev_cross, prev_names = merged[-1]
-            dist_between = haversine(clat, clon, prev_clat, prev_clon)
-            if dist_between < MIN_MERGE_NM:
-                # Fuseer: gebruik gemiddelde positie, grootste radius,
-                # cross_bearing van de zone met de grotere radius
-                fused_lat  = (clat + prev_clat) / 2
-                fused_lon  = (clon + prev_clon) / 2
-                fused_r    = max(r_nm, prev_r)
-                fused_cross= cross_brg if r_nm >= prev_r else prev_cross
-                fused_idx  = (idx + prev_idx) // 2
-                fused_names= prev_names + [zname]
-                merged[-1] = (fused_idx, fused_lat, fused_lon,
-                              fused_r, fused_cross, fused_names)
+            p_idx, p_clat, p_clon, p_r, p_cross, p_names = merged[-1]
+            if haversine(clat, clon, p_clat, p_clon) < MIN_MERGE_NM:
+                merged[-1] = (
+                    (idx + p_idx) // 2,
+                    (clat + p_clat) / 2,
+                    (clon + p_clon) / 2,
+                    max(r_nm, p_r),
+                    cross_brg if r_nm >= p_r else p_cross,
+                    p_names + [zname],
+                )
                 continue
         merged.append((idx, clat, clon, r_nm, cross_brg, [zname]))
 
-    # ── Stap 3: bereken entry/exit per (gefuseerde) zone ──────────────────
+    # ── Stap 3: vervang zone-punten door entry→exit (van eind naar begin) ──
+    # Van achter naar voren verwerken zodat indices niet verschuiven.
     tss_warnings = []
-    insertions   = {}   # route-idx → (entry_pt, exit_pt)
 
-    for idx, clat, clon, r_nm, cross_brg, names in merged:
+    for idx, clat, clon, r_nm, cross_brg, names in reversed(merged):
+        cos_lat = max(0.01, _tss_math.cos(_tss_math.radians(clat)))
+
+        # Kies kruisingsrichting passend bij vaarrichting
         cross_a = cross_brg
         cross_b = (cross_a + 180) % 360
         diff_a  = abs((cross_a - overall_brg + 180) % 360 - 180)
         diff_b  = abs((cross_b - overall_brg + 180) % 360 - 180)
         chosen  = cross_a if diff_a < diff_b else cross_b
         cr      = _tss_math.radians(chosen)
-        cos_lat = max(0.01, _tss_math.cos(_tss_math.radians(clat)))
 
+        # Entry en exit op de loodrechte as, op r_nm van het centrum
         entry_lat = clat - (r_nm / 60) * _tss_math.cos(cr)
         entry_lon = clon - (r_nm / 60) * _tss_math.sin(cr) / cos_lat
         exit_lat  = clat + (r_nm / 60) * _tss_math.cos(cr)
         exit_lon  = clon + (r_nm / 60) * _tss_math.sin(cr) / cos_lat
 
-        # Zorg dat entry aan de kant van de start ligt
+        # Entry moet dichterbij de start liggen
         if (haversine(entry_lat, entry_lon, overall_lat1, overall_lon1) >
-                haversine(exit_lat, exit_lon, overall_lat1, overall_lon1)):
+                haversine(exit_lat,  exit_lon,  overall_lat1, overall_lon1)):
             entry_lat, entry_lon, exit_lat, exit_lon =                 exit_lat, exit_lon, entry_lat, entry_lon
 
-        insertions[idx] = ([entry_lat, entry_lon], [exit_lat, exit_lon])
+        # Vind alle indices van routepunten die IN de zone liggen
+        in_zone = [i for i, pt in enumerate(pts)
+                   if haversine(float(pt[0]), float(pt[1]), clat, clon) <= r_nm * 1.1]
+
+        if not in_zone:
+            # Geen punten gevonden in zone — voeg in op best_idx
+            pts.insert(idx + 1, [exit_lat,  exit_lon])
+            pts.insert(idx + 1, [entry_lat, entry_lon])
+        else:
+            # Vervang alle punten in de zone door entry + exit
+            first_in = min(in_zone)
+            last_in  = max(in_zone)
+            pts[first_in:last_in + 1] = [
+                [entry_lat, entry_lon],
+                [exit_lat,  exit_lon],
+            ]
+
         tss_warnings.extend(names)
 
-    # ── Stap 4: bouw gecorrigeerde route ──────────────────────────────────
-    result = []
-    for i, pt in enumerate(pts_raw):
-        if i in insertions:
-            result.append(insertions[i][0])   # entry
-            result.append(insertions[i][1])   # exit
-        else:
-            result.append(pt)
+    return pts, list(set(tss_warnings))
 
-    return result, list(set(tss_warnings))
 
 
 GLOBAL_CURRENT_ATLAS = {
@@ -2294,16 +2331,6 @@ elif app_mode == t["m3"]:
             # worden. Lokale Chaikin-smooth rond elk correctiepunt.
             pts_smooth, tss_hit = apply_tss_corrections(pts_smooth)
             if tss_hit:
-                # Lokale hersmoothing: alleen de 6 punten rond elk TSS-punt
-                try:
-                    from scipy.interpolate import splprep, splev as _splev
-                    arr2 = np.array(pts_smooth)
-                    tck2, u2 = splprep([arr2[:,0], arr2[:,1]], s=0.00015, k=3)
-                    u2f = np.linspace(0, 1, len(pts_smooth) * 2)
-                    ls2, lo2 = _splev(u2f, tck2)
-                    pts_smooth = [[float(a), float(b)] for a, b in zip(ls2, lo2)]
-                except Exception:
-                    pass
                 tss_names = ", ".join(tss_hit)
                 st.info(
                     f"🚢 **TSS-correctie:** {len(tss_hit)} verkeersseparatiestelsel(s) "
