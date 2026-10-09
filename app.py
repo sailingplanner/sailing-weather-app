@@ -377,18 +377,8 @@ TSS_ZONES = {
         "zone_center":   (55.05, 8.15), "zone_radius_nm":  9,
         "cross_line": [(55.10, 7.85), (55.00, 8.45)],
     },
-    # ── Esbjerg approach ──────────────────────────────────────────────────────
-    "esbjerg_approach_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (55.40, 8.00), "zone_radius_nm":  8,
-        "cross_line": [(55.65, 8.00), (55.15, 8.00)],
-    },
-    # ── Off Horns Rev (windpark + TSS W-Denemarken) ───────────────────────────
-    "horns_rev_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (55.60, 7.90), "zone_radius_nm": 10,
-        "cross_line": [(55.60, 7.50), (55.60, 8.30)],
-    },
+    # Esbjerg approach en Horns Rev zijn te dicht bij de haven en worden
+    # al gedekt door german_bight_west + sylt_lister — niet apart opnemen.
     # ── Elbe Aanloop TSS ──────────────────────────────────────────────────────
     "elbe_tss": {
         "lane_bearing":  270, "cross_bearing":   0,
@@ -771,8 +761,8 @@ def apply_tss_corrections(pts_raw):
     4. Zones te dicht bij start/eind worden genegeerd (havennaderingen).
     5. Zones die minder dan MIN_MERGE_NM uit elkaar liggen worden gefuseerd.
     """
-    MIN_DIST_FROM_ENDPOINT_NM = 10.0
-    MIN_MERGE_NM               = 20.0
+    MIN_DIST_FROM_ENDPOINT_NM = 15.0   # grotere buffer rond havens
+    MIN_MERGE_NM               = 35.0   # fuseer zones tot 35 NM uit elkaar
 
     if len(pts_raw) < 2:
         return pts_raw, []
@@ -2261,7 +2251,7 @@ elif app_mode == t["m3"]:
             # ── Direct-route check: als SeaRoute veel langer is dan vogelvlucht,
             #    gebruik directe lijn (typisch: korte Noordzee-oversteek) ────────
             direct_nm = haversine(la, loa, lb, lob)
-            if dist_nm > direct_nm * 1.35 and direct_nm < 250:
+            if dist_nm > direct_nm * 1.20 and direct_nm < 300:
                 # Genereer directe route met tussenliggende punten
                 n_direct = max(6, TARGET_WP // 8)
                 pts_raw = [
