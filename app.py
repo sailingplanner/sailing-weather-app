@@ -272,601 +272,193 @@ def degrees_to_cardinal(d, nl=True):
 # vloed/ebb worden dan beide op dezelfde richting gezet (getij-onafhankelijk).
 # ══════════════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════
-# TRAFFIC SEPARATION SCHEMES (TSS) — COLREG Regel 10
-# Bron: IMO Ships' Routeing, NtM / UKHO / Rijkswaterstaat
+# TRAFFIC SEPARATION SCHEMES (TSS) — COLREG regel 10
 #
-# Recreatievaart MOET TSS-zones loodrecht kruisen.
-# Structuur per zone:
-#   "naam": {
-#       "lane_bearing": richting van het verkeer in de lane (graden),
-#       "cross_bearing": loodrechte kruisingskoers (lane_bearing ± 90°),
-#       "entry_pts":  lijst van (lat, lon) kruisingslijnen van NO→ZW of N→Z
-#       "width_nm":   breedte van de zone in zeemijlen
-#   }
+# De rekenkundige kern staat in tss.py (los testbaar). Hier staat alleen de
+# koppeling met Streamlit: cache van de OpenStreetMap-aanvragen, meldingen en
+# het tekenen op de kaart.
 #
-# Implementatie: als een route de zone kruist, worden de waypoints vervangen
-# door twee punten: instappunt + uitstappunt langs de loodrechte koers.
+# Werkwijze: de route wordt ALLEEN aangepast als er echte TSS-geometrie uit
+# OpenStreetMap/OpenSeaMap is opgehaald. Zonder die data blijft de route
+# ongewijzigd en volgt er alleen een indicatieve waarschuwing.
 # ══════════════════════════════════════════════════════════════════════════════
-import math as _tss_math
-
-TSS_ZONES = {
-    # ── Dover Strait / Pas de Calais ────────────────────────────────────────
-    # Drukste scheepvaartroute ter wereld. NE-SW lanes, loodrecht = NW-SE (135°/315°)
-    "dover_strait": {
-        "lane_bearing":  225,    # schepen varen NE of SW
-        "cross_bearing":  135,   # recreatie kruist op 135° (ZO) of 315° (NW)
-        "zone_center":   (51.05, 1.60),   # midden Pas de Calais
-        "zone_radius_nm": 12,
-        "cross_line": [          # loodrechte kruisingsas (punten N→Z langs 1.60°E)
-            (51.30, 1.60),
-            (50.80, 1.60),
-        ],
-    },
-    # ── Noord-Hinder Junction ───────────────────────────────────────────────
-    # Knooppunt Noordzee, ca. 51.5N 2.5E. NE/SW en N/Z lanes
-    "noord_hinder": {
-        "lane_bearing":  45,
-        "cross_bearing": 135,
-        "zone_center":   (51.50, 2.50),
-        "zone_radius_nm": 10,
-        "cross_line": [
-            (51.80, 2.50),
-            (51.20, 2.50),
-        ],
-    },
-    # ── IJmuiden TSS (Zee/Kust bij IJmuiden) ────────────────────────────────
-    "ijmuiden_tss": {
-        "lane_bearing":  270,    # oost-west langs kust
-        "cross_bearing":   0,    # loodrecht = N-Z
-        "zone_center":   (52.45, 4.25),
-        "zone_radius_nm":  8,
-        "cross_line": [
-            (52.70, 4.25),
-            (52.20, 4.25),
-        ],
-    },
-    # ── Texel TSS ───────────────────────────────────────────────────────────
-    "texel_tss": {
-        "lane_bearing":  350,
-        "cross_bearing":  80,
-        "zone_center":   (53.10, 4.50),
-        "zone_radius_nm":  8,
-        "cross_line": [
-            (53.30, 4.10),
-            (52.90, 4.90),
-        ],
-    },
-    # ── Terschelling / German Bight Westbound ───────────────────────────────
-    "terschelling_tss": {
-        "lane_bearing":  270,
-        "cross_bearing":   0,
-        "zone_center":   (53.50, 4.80),
-        "zone_radius_nm": 10,
-        "cross_line": [
-            (53.75, 4.80),
-            (53.25, 4.80),
-        ],
-    },
-    # ── Off Frisian Islands (Borkum/Elbe) ───────────────────────────────────
-    "frisian_tss": {
-        "lane_bearing":  90,
-        "cross_bearing":   0,
-        "zone_center":   (54.00, 6.50),
-        "zone_radius_nm": 10,
-        "cross_line": [
-            (54.30, 6.50),
-            (53.70, 6.50),
-        ],
-    },
-    # ── German Bight Western Approach ────────────────────────────────────────
-    # Kruispunt van scheepvaartroutes Elbe/Weser/Jade/Eems — Waddenzee → DK
-    "german_bight_west_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (54.60, 7.80), "zone_radius_nm": 12,
-        "cross_line": [(54.90, 7.50), (54.30, 8.10)],
-    },
-    # ── German Bight Eastern Approach (Elbe/Weser aanloop) ───────────────────
-    "german_bight_east_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (54.00, 8.20), "zone_radius_nm": 10,
-        "cross_line": [(54.30, 8.20), (53.70, 8.20)],
-    },
-    # ── Sylt / Lister Tief approach (Lauwersoog → Esbjerg / Denemarken) ──────
-    "sylt_lister_tss": {
-        "lane_bearing":  350, "cross_bearing":  80,
-        "zone_center":   (55.05, 8.15), "zone_radius_nm":  9,
-        "cross_line": [(55.10, 7.85), (55.00, 8.45)],
-    },
-    # Esbjerg approach en Horns Rev zijn te dicht bij de haven en worden
-    # al gedekt door german_bight_west + sylt_lister — niet apart opnemen.
-    # ── Elbe Aanloop TSS ──────────────────────────────────────────────────────
-    "elbe_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (54.00, 8.70), "zone_radius_nm": 10,
-        "cross_line": [(54.30, 8.70), (53.70, 8.70)],
-    },
-    # ── Weser Aanloop TSS ─────────────────────────────────────────────────────
-    "weser_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (53.85, 8.10), "zone_radius_nm":  9,
-        "cross_line": [(54.10, 7.85), (53.60, 8.35)],
-    },
-    # ── Off Thyborøn (Limfjord ingang, Denemarken) ────────────────────────────
-    "thyboron_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (56.70, 8.20), "zone_radius_nm":  8,
-        "cross_line": [(56.70, 7.80), (56.70, 8.60)],
-    },
-    # ── Great Belt / Storebælt ────────────────────────────────────────────────
-    "great_belt_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (55.30, 11.00), "zone_radius_nm": 10,
-        "cross_line": [(55.30, 10.60), (55.30, 11.40)],
-    },
-    # ── Little Belt / Lillebælt ───────────────────────────────────────────────
-    "little_belt_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (55.50, 9.80), "zone_radius_nm":  8,
-        "cross_line": [(55.50, 9.40), (55.50, 10.20)],
-    },
-    # ── South Falls / Off Lowestoft ─────────────────────────────────────────
-    "south_falls": {
-        "lane_bearing":  20,
-        "cross_bearing": 110,
-        "zone_center":   (52.10, 2.00),
-        "zone_radius_nm":  8,
-        "cross_line": [
-            (52.40, 1.70),
-            (51.80, 2.30),
-        ],
-    },
-    # ── Off Lands End / Isles of Scilly ────────────────────────────────────
-    "lands_end_tss": {
-        "lane_bearing":  60,     # NE-SW Kanaal uitloop
-        "cross_bearing": 150,
-        "zone_center":   (49.90, -6.50),
-        "zone_radius_nm": 12,
-        "cross_line": [
-            (50.20, -6.80),
-            (49.60, -6.20),
-        ],
-    },
-    # ── Ushant / Ouessant TSS (Atlantische ingang Kanaal) ───────────────────
-    "ushant_tss": {
-        "lane_bearing":  60,
-        "cross_bearing": 150,
-        "zone_center":   (48.50, -5.50),
-        "zone_radius_nm": 15,
-        "cross_line": [
-            (48.90, -5.90),
-            (48.10, -5.10),
-        ],
-    },
-    # ── Casquets TSS (NW Normandie / Channel Islands) ───────────────────────
-    "casquets_tss": {
-        "lane_bearing":  75,
-        "cross_bearing": 165,
-        "zone_center":   (49.80, -2.50),
-        "zone_radius_nm": 10,
-        "cross_line": [
-            (50.10, -2.70),
-            (49.50, -2.30),
-        ],
-    },
-    # ── Skagerrak (Noorwegen/Denemarken) ────────────────────────────────────
-    "skagerrak_tss": {
-        "lane_bearing":  270,
-        "cross_bearing":   0,
-        "zone_center":   (57.50, 9.00),
-        "zone_radius_nm": 10,
-        "cross_line": [
-            (57.80, 9.00),
-            (57.20, 9.00),
-        ],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # NEDERLAND / NOORDZEE KUST (aanvullend)
-    # ══════════════════════════════════════════════════════════════════════════
-    "vlieland_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (53.30, 4.70), "zone_radius_nm":  9,
-        "cross_line": [(53.55, 4.45), (53.05, 4.95)],
-    },
-    "vlieland_north_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (53.55, 4.60), "zone_radius_nm":  7,
-        "cross_line": [(53.80, 4.60), (53.30, 4.60)],
-    },
-    "off_texel_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (53.00, 4.40), "zone_radius_nm":  8,
-        "cross_line": [(53.25, 4.15), (52.75, 4.65)],
-    },
-    "maas_northwest_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (52.00, 3.70), "zone_radius_nm":  9,
-        "cross_line": [(52.30, 3.40), (51.70, 4.00)],
-    },
-    "west_hinder_tss": {
-        "lane_bearing":  225, "cross_bearing": 135,
-        "zone_center":   (51.40, 2.30), "zone_radius_nm":  8,
-        "cross_line": [(51.65, 2.05), (51.15, 2.55)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # NOORWEGEN
-    # ══════════════════════════════════════════════════════════════════════════
-    "off_runde_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (62.40, 5.00), "zone_radius_nm": 10,
-        "cross_line": [(62.40, 4.60), (62.40, 5.40)],
-    },
-    "off_stad_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (62.10, 4.70), "zone_radius_nm":  9,
-        "cross_line": [(62.10, 4.30), (62.10, 5.10)],
-    },
-    "off_sotra_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (60.25, 4.60), "zone_radius_nm":  8,
-        "cross_line": [(60.25, 4.20), (60.25, 5.00)],
-    },
-    "north_cape_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (71.20, 25.80), "zone_radius_nm": 12,
-        "cross_line": [(71.50, 25.80), (70.90, 25.80)],
-    },
-    "rost_tss": {
-        "lane_bearing":  330, "cross_bearing":  60,
-        "zone_center":   (67.50, 11.50), "zone_radius_nm": 10,
-        "cross_line": [(67.80, 11.00), (67.20, 12.00)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # IJSLAND
-    # ══════════════════════════════════════════════════════════════════════════
-    "iceland_gardskagi_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (64.10, -22.80), "zone_radius_nm": 12,
-        "cross_line": [(64.40, -22.80), (63.80, -22.80)],
-    },
-    "iceland_reykjanes_tss": {
-        "lane_bearing":   90, "cross_bearing":   0,
-        "zone_center":   (63.60, -24.00), "zone_radius_nm": 12,
-        "cross_line": [(63.90, -24.00), (63.30, -24.00)],
-    },
-    "faxafloi_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (64.20, -23.20), "zone_radius_nm": 10,
-        "cross_line": [(64.20, -23.60), (64.20, -22.80)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # IERLAND / SCHOTLAND
-    # ══════════════════════════════════════════════════════════════════════════
-    "north_channel_tss": {
-        "lane_bearing":  210, "cross_bearing": 120,
-        "zone_center":   (55.20, -5.80), "zone_radius_nm": 10,
-        "cross_line": [(55.50, -6.10), (54.90, -5.50)],
-    },
-    "malin_head_tss": {
-        "lane_bearing":  250, "cross_bearing": 160,
-        "zone_center":   (55.50, -7.50), "zone_radius_nm":  9,
-        "cross_line": [(55.80, -7.70), (55.20, -7.30)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # ATLANTISCHE KUST — PORTUGAL / SPANJE
-    # ══════════════════════════════════════════════════════════════════════════
-    "cape_finisterre_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (42.90, -9.50), "zone_radius_nm": 12,
-        "cross_line": [(42.90, -9.90), (42.90, -9.10)],
-    },
-    "cape_st_vincent_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (36.80, -9.00), "zone_radius_nm": 12,
-        "cross_line": [(36.80, -9.50), (36.80, -8.50)],
-    },
-    "gibraltar_tss": {
-        "lane_bearing":   90, "cross_bearing":   0,
-        "zone_center":   (35.95, -5.60), "zone_radius_nm": 10,
-        "cross_line": [(36.20, -5.60), (35.70, -5.60)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # OOSTZEE
-    # ══════════════════════════════════════════════════════════════════════════
-    "north_rugen_tss": {
-        "lane_bearing":   90, "cross_bearing":   0,
-        "zone_center":   (54.80, 13.50), "zone_radius_nm":  8,
-        "cross_line": [(55.10, 13.50), (54.50, 13.50)],
-    },
-    "hoburgs_north_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (57.80, 19.20), "zone_radius_nm":  8,
-        "cross_line": [(57.80, 18.80), (57.80, 19.60)],
-    },
-    "hoburgs_south_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (57.20, 19.10), "zone_radius_nm":  8,
-        "cross_line": [(57.20, 18.70), (57.20, 19.50)],
-    },
-    "kattegat_north_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (57.40, 11.00), "zone_radius_nm":  9,
-        "cross_line": [(57.40, 10.60), (57.40, 11.40)],
-    },
-
-    # ── Öresund / Sont (Kopenhagen) ───────────────────────────────────────────
-    "oresund_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (55.80, 12.60), "zone_radius_nm":  8,
-        "cross_line": [(55.80, 12.20), (55.80, 13.00)],
-    },
-
-    # ── Off Egersund (ZW Noorwegen, route van NL naar Stavanger) ─────────────
-    "egersund_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (58.40,  5.50), "zone_radius_nm":  9,
-        "cross_line": [(58.40, 5.10), (58.40, 5.90)],
-    },
-
-    # ── Off Utsira (toegang Stavanger/Bergen, druk scheepvaartgebied) ─────────
-    "utsira_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (59.30,  4.80), "zone_radius_nm": 10,
-        "cross_line": [(59.30, 4.40), (59.30, 5.20)],
-    },
-
-    # ── Fair Isle Channel (Schotland → Noorwegen / Noorwegen → Schotland) ────
-    "fair_isle_tss": {
-        "lane_bearing":   90, "cross_bearing":   0,
-        "zone_center":   (59.50, -2.00), "zone_radius_nm":  9,
-        "cross_line": [(59.80, -2.00), (59.20, -2.00)],
-    },
-
-    # ── Pentland Firth (N-Schotland, drukste TSS van de Britse eilanden) ──────
-    "pentland_firth_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (58.70, -3.20), "zone_radius_nm": 10,
-        "cross_line": [(59.00, -3.20), (58.40, -3.20)],
-    },
-
-    # ── Off Ekofisk (centrale Noordzee, olie- en scheepvaartgebied) ──────────
-    "ekofisk_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (56.50,  3.20), "zone_radius_nm": 10,
-        "cross_line": [(56.80, 2.90), (56.20, 3.50)],
-    },
-
-    # ── Off Egersund uitgebreid — Stavanger aanloop ───────────────────────────
-    "stavanger_approach_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (58.90,  5.00), "zone_radius_nm": 12,
-        "cross_line": [(58.90, 4.50), (58.90, 5.50)],
-    },
-
-    # ── Off Ålesund / Møre (tss midden-Noorwegen) ────────────────────────────
-    "more_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (62.50,  4.80), "zone_radius_nm": 12,
-        "cross_line": [(62.50, 4.30), (62.50, 5.30)],
-    },
-
-    # ── Centrale Noordzee / Forties oilfield (Edinburgh/Aberdeen route) ───────
-    "central_north_sea_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (57.50,  1.00), "zone_radius_nm": 12,
-        "cross_line": [(57.80, 0.70), (57.20, 1.30)],
-    },
-
-    # ── Off Skagen (Denemarken/Noorwegen, Göteborg aanloop) ──────────────────
-    "skagen_tss": {
-        "lane_bearing":  315, "cross_bearing":  45,
-        "zone_center":   (57.80,  9.80), "zone_radius_nm": 10,
-        "cross_line": [(58.10, 9.50), (57.50, 10.10)],
-    },
-
-    # ── Göteborg aanloop (Kattegat/Skagerrak overgang) ────────────────────────
-    "goteborg_approach_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (57.60, 11.50), "zone_radius_nm": 10,
-        "cross_line": [(57.60, 11.10), (57.60, 11.90)],
-    },
-
-    # ── Læsø Rende (Noord-Kattegat, smalle vaargeul DK) ─────────────────────
-    "laeso_rende_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (57.30, 11.00), "zone_radius_nm":  8,
-        "cross_line": [(57.30, 10.60), (57.30, 11.40)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # CARIBISCH GEBIED
-    # ══════════════════════════════════════════════════════════════════════════
-    "mona_passage_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (18.20, -67.80), "zone_radius_nm": 12,
-        "cross_line": [(18.20, -68.20), (18.20, -67.40)],
-    },
-    "windward_passage_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (19.80, -74.10), "zone_radius_nm": 12,
-        "cross_line": [(19.80, -74.50), (19.80, -73.70)],
-    },
-    "yucatan_channel_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (21.50, -85.50), "zone_radius_nm": 12,
-        "cross_line": [(21.50, -85.90), (21.50, -85.10)],
-    },
-    "florida_strait_tss": {
-        "lane_bearing":   45, "cross_bearing": 135,
-        "zone_center":   (24.50, -80.50), "zone_radius_nm": 12,
-        "cross_line": [(24.80, -80.80), (24.20, -80.20)],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # SPITSBERGEN / GROENLAND
-    # ══════════════════════════════════════════════════════════════════════════
-    "bear_island_tss": {
-        "lane_bearing":    0, "cross_bearing":  90,
-        "zone_center":   (74.50, 19.00), "zone_radius_nm": 12,
-        "cross_line": [(74.50, 18.50), (74.50, 19.50)],
-    },
-    "denmark_strait_tss": {
-        "lane_bearing":  180, "cross_bearing":  90,
-        "zone_center":   (66.00, -27.00), "zone_radius_nm": 15,
-        "cross_line": [(66.00, -27.60), (66.00, -26.40)],
-    },
-    "cape_farewell_tss": {
-        "lane_bearing":  270, "cross_bearing":   0,
-        "zone_center":   (59.50, -43.50), "zone_radius_nm": 12,
-        "cross_line": [(59.80, -43.50), (59.20, -43.50)],
-    },
-}
+try:
+    import tss
+    TSS_OK = True
+except Exception:                      # tss.py ontbreekt naast app.py
+    tss = None
+    TSS_OK = False
 
 
-def _point_to_segment_dist_nm(px, py, ax, ay, bx, by):
-    """Afstand van punt (px,py) tot lijnstuk (ax,ay)-(bx,by) in NM."""
-    dx, dy = bx - ax, by - ay
-    if dx == 0 and dy == 0:
-        return haversine(px, py, ax, ay)
-    t = max(0, min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy)))
-    return haversine(px, py, ax + t*dx, ay + t*dy)
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def _osm_tss_tile(s, w, n, e):
+    """Eén tegel OpenSeaMap-data. Gooit een fout bij mislukken (dan wordt er niet gecachet)."""
+    return tss.fetch_overpass(s, w, n, e)
 
 
-def _seg_intersects_zone(lat1, lon1, lat2, lon2, zone_center, zone_radius_nm):
-    """Controleert of lijnstuk (lat1,lon1)-(lat2,lon2) door de TSS-zone gaat."""
-    clat, clon = zone_center
-    # Check meerdere punten langs het segment
-    for frac in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        slat = lat1 + frac * (lat2 - lat1)
-        slon = lon1 + frac * (lon2 - lon1)
-        if haversine(slat, slon, clat, clon) <= zone_radius_nm:
-            return True
-    return False
+def load_tss_context(route, budget_s=75):
+    """Haalt TSS-geometrie langs de route op. Geeft (schemes, status)."""
+    import time as _time
+    status = {"mode": "none", "tiles": 0, "tiles_ok": 0, "n_schemes": 0, "error": ""}
+    if not TSS_OK:
+        status["error"] = "tss.py ontbreekt"
+        return [], status
+    if not tss.HAVE_SHAPELY:
+        status["error"] = "shapely ontbreekt"
+        return [], status
+    cool = st.session_state.get("tss_cooldown_until", 0)
+    if _time.time() < cool:
+        status["error"] = "OpenStreetMap tijdelijk niet bereikbaar (nieuwe poging over enkele minuten)"
+        return [], status
+    tiles = tss.tiles_for_route(route)
+    status["tiles"] = len(tiles)
+    elements, t0, fails_in_row = [], _time.time(), 0
+    for tile in tiles:
+        if _time.time() - t0 > budget_s:
+            status["error"] = "tijdbudget voor OpenStreetMap op"
+            break
+        try:
+            elements.extend(_osm_tss_tile(*tile))
+            status["tiles_ok"] += 1
+            fails_in_row = 0
+        except Exception as ex:
+            status["error"] = str(ex)[:140]
+            fails_in_row += 1
+            if status["tiles_ok"] == 0 and fails_in_row >= 2:
+                break                      # Overpass ligt plat: niet alle tegels blijven proberen
+    if status["tiles_ok"] == 0:
+        st.session_state["tss_cooldown_until"] = _time.time() + 300
+    schemes = tss.build_schemes(elements) if elements else []
+    status["n_schemes"] = len(schemes)
+    status["mode"] = "osm" if schemes else "none"
+    return schemes, status
 
 
-def apply_tss_corrections(pts_raw):
-    """
-    TSS-correctie voor recreatievaart (COLREG regel 10).
+def apply_tss_to_route(route):
+    """Past een route aan op echte TSS-geometrie. Zonder data blijft de route ongewijzigd."""
+    info = {"schemes": [], "status": {}, "report": {"windows": [], "touched": []}, "indicative": []}
+    schemes, status = load_tss_context(route)
+    info["schemes"], info["status"] = schemes, status
+    new_route = route
+    if schemes:
+        try:
+            new_route, info["report"] = tss.reroute_around_schemes(route, schemes)
+        except Exception as ex:                       # nooit de route laten stukgaan
+            info["status"]["error"] = f"routering: {str(ex)[:100]}"
+            new_route = route
+    if TSS_OK:
+        try:
+            info["indicative"] = tss.indicative_hits(route, schemes)
+        except Exception:
+            info["indicative"] = []
+    return new_route, info
 
-    Aanpak die X-vormen en zigzags voorkomt:
-    1. Zoek per TSS-zone het bereik van routepunten dat BINNEN de zone valt.
-    2. Vervang alle punten in dat bereik door precies twee punten:
-       entry_pt en exit_pt op de loodrechte kruisingsas.
-    3. Geen hersmoothing — de rechte lijn entry→exit IS de loodrechte kruising.
-    4. Zones te dicht bij start/eind worden genegeerd (havennaderingen).
-    5. Zones die minder dan MIN_MERGE_NM uit elkaar liggen worden gefuseerd.
-    """
-    MIN_DIST_FROM_ENDPOINT_NM = 15.0   # grotere buffer rond havens
-    MIN_MERGE_NM               = 35.0   # fuseer zones tot 35 NM uit elkaar
 
-    if len(pts_raw) < 2:
-        return pts_raw, []
+def _tss_len_nm(route):
+    """Lengte van een route in zeemijlen."""
+    if not TSS_OK or len(route) < 2:
+        return 0.0
+    return sum(tss.haversine_nm(a[0], a[1], b[0], b[1]) for a, b in zip(route[:-1], route[1:]))
 
-    pts = [list(p) for p in pts_raw]   # werk met kopiëen
-    overall_lat1, overall_lon1 = float(pts[0][0]),  float(pts[0][1])
-    overall_lat2, overall_lon2 = float(pts[-1][0]), float(pts[-1][1])
-    overall_brg = (_tss_math.degrees(
-        _tss_math.atan2(overall_lon2 - overall_lon1,
-                        overall_lat2 - overall_lat1)) + 360) % 360
 
-    # ── Stap 1: vind alle geraakt zones ──────────────────────────────────
-    candidates = []
-    for zone_name, zone in TSS_ZONES.items():
-        clat, clon = zone["zone_center"]
-        r_nm = zone["zone_radius_nm"]
+def tss_changed(info):
+    return any(w.get("changed") for w in info["report"].get("windows", []))
 
-        # Negeer zones te dicht bij start of eind
-        if (haversine(overall_lat1, overall_lon1, clat, clon) < MIN_DIST_FROM_ENDPOINT_NM or
-                haversine(overall_lat2, overall_lon2, clat, clon) < MIN_DIST_FROM_ENDPOINT_NM):
-            continue
 
-        min_dist, best_idx = float("inf"), -1
-        for i, pt in enumerate(pts):
-            d = haversine(float(pt[0]), float(pt[1]), clat, clon)
-            if d < min_dist:
-                min_dist, best_idx = d, i
+def remap_iso_path(iso_path, new_pts):
+    """Zet tijd en weergegevens van de oorspronkelijke waypoints over op een gecorrigeerde route."""
+    orig = [(float(w[0]), float(w[1])) for w in iso_path]
+    t0, t1 = iso_path[0][2], iso_path[-1][2]
+    cum = [0.0]
+    for a, b in zip(new_pts[:-1], new_pts[1:]):
+        cum.append(cum[-1] + tss.haversine_nm(a[0], a[1], b[0], b[1]))
+    total = cum[-1] or 1.0
+    out = []
+    for p, c in zip(new_pts, cum):
+        j = min(range(len(orig)), key=lambda k: (orig[k][0] - p[0]) ** 2 + (orig[k][1] - p[1]) ** 2)
+        w = iso_path[j]
+        out.append((p[0], p[1], t0 + (t1 - t0) * (c / total), w[3], w[4], w[5]))
+    return out
 
-        if min_dist > r_nm:
-            continue
 
-        candidates.append((best_idx, clat, clon, r_nm,
-                           zone["cross_bearing"], zone_name))
+def render_tss_notice(info):
+    """Toont kort en eerlijk wat er met de TSS-data is gedaan."""
+    stt, rep, ind = info["status"], info["report"], info["indicative"]
+    err = stt.get("error", "")
+    if not TSS_OK:
+        st.warning("🚢 Het bestand tss.py staat niet naast app.py: er is geen TSS-controle uitgevoerd."
+                   if is_nl else
+                   "🚢 tss.py is missing next to app.py: no TSS check was performed.")
+        return
+    if err == "shapely ontbreekt":
+        st.warning("🚢 Voeg `shapely` toe aan requirements.txt om de TSS-controle te activeren. "
+                   "De route is niet aangepast."
+                   if is_nl else
+                   "🚢 Add `shapely` to requirements.txt to enable the TSS check. The route was not modified.")
+        return
+    wins = rep.get("windows", [])
+    changed = [w for w in wins if w.get("changed")]
+    failed = [w for w in wins if not w.get("changed") and (w.get("failed") or w.get("rejected") or w.get("error"))]
+    fine = [w for w in wins if w not in changed and w not in failed]
+    names = lambda ws: ", ".join(sorted({n for w in ws for n in w.get("names", [])}))
+    if stt.get("mode") == "osm":
+        st.caption(
+            f"🚢 TSS-data: OpenStreetMap/OpenSeaMap — {stt['n_schemes']} stelsel(s) in het gebied "
+            f"(kaartdelen {stt['tiles_ok']}/{stt['tiles']}). Indicatief; controleer altijd met officiële kaarten."
+            if is_nl else
+            f"🚢 TSS data: OpenStreetMap/OpenSeaMap — {stt['n_schemes']} scheme(s) in the area "
+            f"(map parts {stt['tiles_ok']}/{stt['tiles']}). Indicative; always verify with official charts.")
+        if changed:
+            added = sum(w.get("added_nm", 0.0) for w in changed)
+            st.info(f"🚢 Route aangepast bij {names(changed)} (+{added:.1f} NM): je kruist de verkeersbanen "
+                    f"loodrecht of blijft erbuiten (COLREG regel 10)."
+                    if is_nl else
+                    f"🚢 Route adjusted at {names(changed)} (+{added:.1f} NM): you cross the traffic lanes "
+                    f"at right angles or stay clear of them (COLREG rule 10).")
+        if fine:
+            st.caption(f"✅ Al in orde (geen aanpassing nodig): {names(fine)}"
+                       if is_nl else f"✅ Already fine (no change needed): {names(fine)}")
+        if failed:
+            st.warning(f"⚠️ Geen veilige correctie berekend bij {names(failed)}. Controleer deze passage zelf "
+                       f"en kruis loodrecht."
+                       if is_nl else
+                       f"⚠️ No safe correction could be computed at {names(failed)}. Check this passage yourself "
+                       f"and cross at right angles.")
+        if stt["tiles_ok"] < stt["tiles"]:
+            st.caption(f"ℹ️ {stt['tiles'] - stt['tiles_ok']} kaartdeel(en) ontbraken ({err}); daar is niet gecorrigeerd."
+                       if is_nl else
+                       f"ℹ️ {stt['tiles'] - stt['tiles_ok']} map part(s) were missing ({err}); no correction there.")
+    else:
+        why = f" ({err})" if err else ""
+        st.caption(f"🚢 TSS: geen OpenStreetMap-data beschikbaar{why} — route niet aangepast."
+                   if is_nl else
+                   f"🚢 TSS: no OpenStreetMap data available{why} — route not modified.")
+    if ind:
+        st.warning("⚠️ De route passeert mogelijk deze verkeersscheidingsstelsels (indicatief, niet geverifieerd): "
+                   + ", ".join(h["name"] for h in ind[:8]) + (f" (+{len(ind) - 8})" if len(ind) > 8 else "")
+                   + ". Steek verkeersbanen loodrecht over en blijf buiten de scheidingszone (COLREG regel 10)."
+                   if is_nl else
+                   "⚠️ The route may pass these traffic separation schemes (indicative, unverified): "
+                   + ", ".join(h["name"] for h in ind[:8]) + (f" (+{len(ind) - 8})" if len(ind) > 8 else "")
+                   + ". Cross lanes at right angles and stay out of the separation zone (COLREG rule 10).")
 
-    if not candidates:
-        return pts, []
 
-    candidates.sort(key=lambda x: x[0])
-
-    # ── Stap 2: fuseer dicht bij elkaar liggende zones ────────────────────
-    merged = []
-    for cand in candidates:
-        idx, clat, clon, r_nm, cross_brg, zname = cand
-        if merged:
-            p_idx, p_clat, p_clon, p_r, p_cross, p_names = merged[-1]
-            if haversine(clat, clon, p_clat, p_clon) < MIN_MERGE_NM:
-                merged[-1] = (
-                    (idx + p_idx) // 2,
-                    (clat + p_clat) / 2,
-                    (clon + p_clon) / 2,
-                    max(r_nm, p_r),
-                    cross_brg if r_nm >= p_r else p_cross,
-                    p_names + [zname],
-                )
-                continue
-        merged.append((idx, clat, clon, r_nm, cross_brg, [zname]))
-
-    # ── Stap 3: vervang zone-punten door entry→exit (van eind naar begin) ──
-    # Van achter naar voren verwerken zodat indices niet verschuiven.
-    tss_warnings = []
-
-    for idx, clat, clon, r_nm, cross_brg, names in reversed(merged):
-        cos_lat = max(0.01, _tss_math.cos(_tss_math.radians(clat)))
-
-        # Kies kruisingsrichting passend bij vaarrichting
-        cross_a = cross_brg
-        cross_b = (cross_a + 180) % 360
-        diff_a  = abs((cross_a - overall_brg + 180) % 360 - 180)
-        diff_b  = abs((cross_b - overall_brg + 180) % 360 - 180)
-        chosen  = cross_a if diff_a < diff_b else cross_b
-        cr      = _tss_math.radians(chosen)
-
-        # Entry en exit op de loodrechte as, op r_nm van het centrum
-        entry_lat = clat - (r_nm / 60) * _tss_math.cos(cr)
-        entry_lon = clon - (r_nm / 60) * _tss_math.sin(cr) / cos_lat
-        exit_lat  = clat + (r_nm / 60) * _tss_math.cos(cr)
-        exit_lon  = clon + (r_nm / 60) * _tss_math.sin(cr) / cos_lat
-
-        # Entry moet dichterbij de start liggen
-        if (haversine(entry_lat, entry_lon, overall_lat1, overall_lon1) >
-                haversine(exit_lat,  exit_lon,  overall_lat1, overall_lon1)):
-            entry_lat, entry_lon, exit_lat, exit_lon =                 exit_lat, exit_lon, entry_lat, entry_lon
-
-        # Vind alle indices van routepunten die IN de zone liggen
-        in_zone = [i for i, pt in enumerate(pts)
-                   if haversine(float(pt[0]), float(pt[1]), clat, clon) <= r_nm * 1.1]
-
-        if not in_zone:
-            # Geen punten gevonden in zone — voeg in op best_idx
-            pts.insert(idx + 1, [exit_lat,  exit_lon])
-            pts.insert(idx + 1, [entry_lat, entry_lon])
-        else:
-            # Vervang alle punten in de zone door entry + exit
-            first_in = min(in_zone)
-            last_in  = max(in_zone)
-            pts[first_in:last_in + 1] = [
-                [entry_lat, entry_lon],
-                [exit_lat,  exit_lon],
-            ]
-
-        tss_warnings.extend(names)
-
-    return pts, list(set(tss_warnings))
-
+def add_tss_to_map(fmap, info):
+    """Tekent de gebruikte TSS-voetafdrukken (en indicatieve cirkels) op een foliumkaart."""
+    for sc in info.get("schemes", []):
+        for ring in sc.parts:
+            folium.Polygon(
+                locations=[[p[0], p[1]] for p in ring],
+                color="#1565C0", weight=1, fill=True, fill_color="#1565C0", fill_opacity=0.20,
+                tooltip=f"TSS: {sc.name} — loodrecht kruisen (COLREG 10) · OpenStreetMap",
+            ).add_to(fmap)
+    for h in info.get("indicative", []):
+        folium.Circle(
+            location=[h["lat"], h["lon"]], radius=h["r_nm"] * 1852,
+            color="#E65100", fill=True, fill_color="#E65100", fill_opacity=0.06,
+            weight=1, dash_array="4 4",
+            tooltip=f"TSS (indicatief, niet geverifieerd): {h['name']}",
+        ).add_to(fmap)
 
 
 GLOBAL_CURRENT_ATLAS = {
@@ -2316,19 +1908,13 @@ elif app_mode == t["m3"]:
                     return pts
                 pts_smooth = _chaikin(pts_mid)
 
-            # ── Stap 3: TSS-correctie NA smoothing ───────────────────────────
-            # Toepassen na smoothing zodat correctiepunten niet weggesmoothed
-            # worden. Lokale Chaikin-smooth rond elk correctiepunt.
-            pts_smooth, tss_hit = apply_tss_corrections(pts_smooth)
-            if tss_hit:
-                tss_names = ", ".join(tss_hit)
-                st.info(
-                    f"🚢 **TSS-correctie:** {len(tss_hit)} verkeersseparatiestelsel(s) "
-                    f"({tss_names}) — loodrecht gekruist conform COLREG regel 10."
-                    if is_nl else
-                    f"🚢 **TSS correction:** {len(tss_hit)} traffic separation scheme(s) "
-                    f"({tss_names}) — perpendicular crossing per COLREG rule 10."
-                )
+            # ── Stap 3: TSS-controle NA smoothing (echte OSM-geometrie) ──────
+            with st.spinner("TSS-data ophalen (OpenStreetMap)..." if is_nl else "Fetching TSS data (OpenStreetMap)..."):
+                pts_tss, tss_info = apply_tss_to_route(pts_smooth)
+            if tss_changed(tss_info):
+                _avg_gap = max(1.0, _tss_len_nm(pts_smooth) / max(1, len(pts_smooth)))
+                pts_smooth = tss.thin_route(pts_tss, 0.15, max_gap_nm=1.5 * _avg_gap)
+            render_tss_notice(tss_info)
 
             # ── Stap 4: haven-benadering start en eind ───────────────────────
             start_approach = []
@@ -2530,16 +2116,7 @@ The orange line shows the smooth open-water route. The blue dotted lines show th
 
         folium.Marker([la,loa], popup=f"Start: {na}", icon=folium.Icon(color="green",icon="play")).add_to(cmap)
         folium.Marker([lb,lob], popup=f"End: {nb}",   icon=folium.Icon(color="red",  icon="flag")).add_to(cmap)
-        # TSS-zones als lichtblauwe cirkels op de kaart
-        for _zn, _zd in TSS_ZONES.items():
-            _zclat, _zclon = _zd["zone_center"]
-            _zr_m = _zd["zone_radius_nm"] * 1852
-            folium.Circle(
-                location=[_zclat, _zclon], radius=_zr_m,
-                color="#1565C0", fill=True, fill_color="#1565C0",
-                fill_opacity=0.07, weight=1, dash_array="4 4",
-                tooltip=f"TSS: {_zn.replace('_',' ').title()} — loodrecht kruisen (COLREG 10)",
-            ).add_to(cmap)
+        add_tss_to_map(cmap, tss_info)
         folium.LayerControl().add_to(cmap)
         components.html(cmap._repr_html_(), height=550)
 
@@ -2754,28 +2331,7 @@ favourable heading *within* that corridor based on wind and current.
 
         # ── Stap 1: bouw bevaarbaar korridorgebied via SeaRoute ──────────────
         prog_bar.progress(5, text="SeaRoute-corridor ophalen..." if is_nl else "Fetching SeaRoute corridor...")
-        corridor, corridor_raw = build_searoute_corridor(la3, loa3, lb3, lob3, width_nm=40.0)
-
-        # TSS-correctie op corridorpunten: voeg loodrechte kruisingspunten toe
-        # aan de corridor zodat de isochrone-router ze als bevaarbaar herkent
-        if corridor_raw:
-            corridor_corrected, tss_hit_3b = apply_tss_corrections(corridor_raw)
-            if tss_hit_3b:
-                # Voeg TSS-kruisingsgebied toe aan corridor
-                GRID = 0.25
-                for pt in corridor_corrected:
-                    key = (round(pt[0] / GRID), round(pt[1] / GRID))
-                    corridor.add(key)
-                    # Ook een buffer van 1 cel rondom elk kruisingspunt
-                    for dlat in [-1, 0, 1]:
-                        for dlon in [-1, 0, 1]:
-                            corridor.add((key[0]+dlat, key[1]+dlon))
-                tss_names_3b = ", ".join(tss_hit_3b)
-                st.info(
-                    f"🚢 De corridor is aangepast voor loodrechte TSS-kruising: {tss_names_3b} (COLREG 10)."
-                    if is_nl else
-                    f"🚢 Corridor adjusted for perpendicular TSS crossing: {tss_names_3b} (COLREG 10)."
-                )
+        corridor, _corridor_raw = build_searoute_corridor(la3, loa3, lb3, lob3, width_nm=40.0)
 
         if not corridor:
             st.warning(
@@ -2823,36 +2379,17 @@ favourable heading *within* that corridor based on wind and current.
         prog_text.empty()
         st.session_state["3b_running"] = False
 
-        # ── TSS-correctie op de uiteindelijke weergestuurde route ────────────
-        # De corridor zorgt dat de router er doorheen kan navigeren, maar
-        # apply_tss_corrections garandeert de exacte loodrechte kruising
-        # en fusioneert dicht bij elkaar liggende zones.
+        # ── TSS-controle op de uiteindelijke weergestuurde route ────────────
+        tss_info_3b = None
         if iso_path and len(iso_path) >= 2:
-            iso_pts_raw = [[wp[0], wp[1]] for wp in iso_path]
-            iso_pts_corrected, tss_hit_post = apply_tss_corrections(iso_pts_raw)
-            if tss_hit_post:
-                # Herbouw iso_path met gecorrigeerde coördinaten
-                # Voeg de extra TSS-punten in als tussenliggende waypoints
-                # (zonder weersdata — die worden als "n/a" getoond)
-                corrected_path = []
-                orig_idx = 0
-                for i, pt in enumerate(iso_pts_corrected):
-                    if orig_idx < len(iso_path) and [iso_path[orig_idx][0], iso_path[orig_idx][1]] == pt:
-                        corrected_path.append(iso_path[orig_idx])
-                        orig_idx += 1
-                    else:
-                        # TSS-correctiepunt: voeg toe met lege weersdata
-                        corrected_path.append((pt[0], pt[1],
-                            iso_path[min(orig_idx, len(iso_path)-1)][2],
-                            0.0, 0.0, 0.0))
-                iso_path = corrected_path
-                st.info(
-                    f"🚢 TSS-correctie ook toegepast op weergestuurde route: "
-                    f"{', '.join(tss_hit_post)} — loodrechte kruising (COLREG 10)."
-                    if is_nl else
-                    f"🚢 TSS correction also applied to weather-optimised route: "
-                    f"{', '.join(tss_hit_post)} — perpendicular crossing (COLREG 10)."
-                )
+            _iso_pts = [[wp[0], wp[1]] for wp in iso_path]
+            with st.spinner("TSS-data ophalen (OpenStreetMap)..." if is_nl else "Fetching TSS data (OpenStreetMap)..."):
+                _iso_new, tss_info_3b = apply_tss_to_route(_iso_pts)
+            if tss_changed(tss_info_3b):
+                _avg_gap = max(1.0, _tss_len_nm(_iso_pts) / max(1, len(_iso_pts)))
+                _iso_thin = tss.thin_route(_iso_new, 0.15, max_gap_nm=1.5 * _avg_gap)
+                iso_path = remap_iso_path(iso_path, _iso_thin)
+            render_tss_notice(tss_info_3b)
 
         if not iso_path or len(iso_path) < 2:
             st.error(
@@ -3087,6 +2624,8 @@ favourable heading *within* that corridor based on wind and current.
         center_lat  = sum(wp[0] for wp in iso_path) / len(iso_path)
         center_lon  = sum(wp[1] for wp in iso_path) / len(iso_path)
         cmap3 = folium.Map(location=[center_lat, center_lon], zoom_start=6)
+        if tss_info_3b:
+            add_tss_to_map(cmap3, tss_info_3b)
 
         # Pre-bereken advies per waypoint voor kaart-tooltip
         def _twa_calc(hdg, w_dir):
