@@ -381,6 +381,19 @@ def remap_iso_path(iso_path, new_pts):
     return out
 
 
+def _tss_reason(err):
+    """Vertaalt een technische foutmelding naar een begrijpelijke reden (NL, EN)."""
+    e = (err or "").lower()
+    if "tijdelijk niet bereikbaar" in e:
+        return ("omdat OpenStreetMap kort geleden niet reageerde (over enkele minuten wordt het opnieuw geprobeerd)",
+                "because OpenStreetMap did not respond a moment ago (it will be retried in a few minutes)")
+    if "timeout" in e or "read time" in e or "tijdbudget" in e:
+        return ("omdat de OpenStreetMap-server niet op tijd antwoordde",
+                "because the OpenStreetMap server did not respond in time")
+    return ("omdat de OpenStreetMap-server niet bereikbaar was",
+            "because the OpenStreetMap server could not be reached")
+
+
 def render_tss_notice(info):
     """Toont kort en eerlijk wat er met de TSS-data is gedaan."""
     stt, rep, ind = info["status"], info["report"], info["indicative"]
@@ -425,14 +438,27 @@ def render_tss_notice(info):
                        f"⚠️ No safe correction could be computed at {names(failed)}. Check this passage yourself "
                        f"and cross at right angles.")
         if stt["tiles_ok"] < stt["tiles"]:
-            st.caption(f"ℹ️ {stt['tiles'] - stt['tiles_ok']} kaartdeel(en) ontbraken ({err}); daar is niet gecorrigeerd."
-                       if is_nl else
-                       f"ℹ️ {stt['tiles'] - stt['tiles_ok']} map part(s) were missing ({err}); no correction there.")
+            r_nl, r_en = _tss_reason(err)
+            st.info(f"ℹ️ Een deel van de TSS-gegevens kon niet worden opgehaald, {r_nl}. Op die stukken is de "
+                    f"route niet op TSS aangepast; de rest is wel gecontroleerd."
+                    if is_nl else
+                    f"ℹ️ Part of the TSS data could not be retrieved, {r_en}. The route was not adjusted for TSS "
+                    f"on those stretches; the rest was checked.")
+            if err:
+                with st.expander("Technische details" if is_nl else "Technical details"):
+                    st.code(err)
     else:
-        why = f" ({err})" if err else ""
-        st.caption(f"🚢 TSS: geen OpenStreetMap-data beschikbaar{why} — route niet aangepast."
-                   if is_nl else
-                   f"🚢 TSS: no OpenStreetMap data available{why} — route not modified.")
+        r_nl, r_en = _tss_reason(err)
+        st.info(f"ℹ️ Je route is gewoon berekend. De gegevens over verkeersscheidingsstelsels (TSS) konden nu "
+                f"niet worden opgehaald, {r_nl}. Daardoor is de route deze keer niet op TSS aangepast. "
+                f"Probeer het over enkele minuten opnieuw."
+                if is_nl else
+                f"ℹ️ Your route was calculated as normal. The traffic separation scheme (TSS) data could not be "
+                f"retrieved just now, {r_en}. As a result the route was not adjusted for TSS this time. "
+                f"Please try again in a few minutes.")
+        if err:
+            with st.expander("Technische details" if is_nl else "Technical details"):
+                st.code(err)
     if ind:
         st.warning("⚠️ De route passeert mogelijk deze verkeersscheidingsstelsels (indicatief, niet geverifieerd): "
                    + ", ".join(h["name"] for h in ind[:8]) + (f" (+{len(ind) - 8})" if len(ind) > 8 else "")
