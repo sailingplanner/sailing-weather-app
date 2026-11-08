@@ -1,3 +1,4 @@
+
 import streamlit as st
 import requests
 import pandas as pd
@@ -394,6 +395,30 @@ def _tss_reason(err):
             "because the OpenStreetMap server could not be reached")
 
 
+def append_searoute_remainder(iso_path, sea_path, dest, boat_spd_kt, max_gap_nm=25.0):
+    """Haalt de router de bestemming niet binnen de voorspelling (7 dagen), dan vullen we aan met de
+    kortste route (SeaRoute). Die extra punten hebben geen weerdata (NaN) en worden zo gemarkeerd."""
+    if not sea_path:
+        return iso_path
+    last = iso_path[-1]
+    j = min(range(len(sea_path)), key=lambda k: (sea_path[k][0] - last[0]) ** 2 + (sea_path[k][1] - last[1]) ** 2)
+    pts = [[float(last[0]), float(last[1])]] + [[float(p[0]), float(p[1])] for p in sea_path[j + 1:]]
+    if haversine(pts[-1][0], pts[-1][1], dest[0], dest[1]) > 1.0:
+        pts.append([float(dest[0]), float(dest[1])])
+    kept, since = [pts[0]], 0.0
+    for a, b in zip(pts[:-1], pts[1:]):
+        since += haversine(a[0], a[1], b[0], b[1])
+        if since >= max_gap_nm or b is pts[-1]:
+            kept.append(b)
+            since = 0.0
+    out, cum = list(iso_path), 0.0
+    for a, b in zip(kept[:-1], kept[1:]):
+        cum += haversine(a[0], a[1], b[0], b[1])
+        out.append((b[0], b[1], last[2] + timedelta(hours=cum / max(boat_spd_kt, 0.5)),
+                    float("nan"), float("nan"), float(boat_spd_kt)))
+    return out
+
+
 def render_tss_notice(info):
     """Toont kort en eerlijk wat er met de TSS-data is gedaan."""
     stt, rep, ind = info["status"], info["report"], info["indicative"]
@@ -447,6 +472,12 @@ def render_tss_notice(info):
             if err:
                 with st.expander("Technische details" if is_nl else "Technical details"):
                     st.code(err)
+    elif not err and stt.get("tiles", 0) > 0 and stt.get("tiles_ok", 0) == stt.get("tiles", 0):
+        st.caption("🚢 TSS: OpenStreetMap kent geen verkeersscheidingsstelsels langs deze route (of het gebied is "
+                   "niet gekarteerd). De route is niet op TSS aangepast."
+                   if is_nl else
+                   "🚢 TSS: OpenStreetMap has no traffic separation schemes along this route (or the area is not "
+                   "mapped). The route was not adjusted for TSS.")
     else:
         r_nl, r_en = _tss_reason(err)
         st.info(f"ℹ️ Je route is gewoon berekend. De gegevens over verkeersscheidingsstelsels (TSS) konden nu "
@@ -885,21 +916,30 @@ def fetch_combined_history(lat, lon, start_str, end_str):
     df["precipitation"]= df_w["precipitation"].fillna(0) if "precipitation" in df_w else 0.0
     return df
 
+_WX_BREAKER = {"until": 0.0}     # tot dit tijdstip geen nieuwe weeraanvragen (aanvraaglimiet bereikt)
+
+
 def _get_with_retry(url, params, timeout=25, retries=2):
-    """Voert een GET-request uit met automatische retry bij timeout."""
-    for attempt in range(retries):
+    """GET met automatische retry bij time-out. Geeft de JSON (dict) terug.
+    Gooit een fout als de API een foutmelding terugstuurt (bijv. aanvraaglimiet bereikt)."""
+    last = None
+    for _attempt in range(retries):
         try:
-            return requests.get(url, params=params, timeout=timeout).json()
-        except requests.exceptions.Timeout:
-            if attempt == retries - 1:
-                raise
-        except Exception:
-            raise
-    return {}
+            data = requests.get(url, params=params, timeout=timeout).json()
+            if isinstance(data, dict) and data.get("error"):
+                reason = str(data.get("reason", "API-fout"))
+                if "limit" in reason.lower():          # niet blijven aandringen terwijl de limiet geldt
+                    import time as _t
+                    _WX_BREAKER["until"] = _t.time() + 90
+                raise RuntimeError(reason[:120])
+            return data
+        except requests.exceptions.Timeout as ex:
+            last = ex                       # alleen bij time-out opnieuw proberen
+    raise last if last else RuntimeError("geen antwoord van de weerdienst")
 
 
 @st.cache_data
-def fetch_forecast_and_tides(lat, lon):
+def _fetch_forecast_and_tides_cached(lat, lon):
     df_w = pd.DataFrame()
     df_m = pd.DataFrame()
     try:
@@ -908,7 +948,7 @@ def fetch_forecast_and_tides(lat, lon):
             "hourly": ["wind_speed_10m","wind_gusts_10m","wind_direction_10m",
                        "temperature_2m","precipitation"],
             "wind_speed_unit": "kn", "timezone": "auto"
-        }, timeout=25).json()
+        }, timeout=25)
         df_w = pd.DataFrame(r.get("hourly", {}))
     except Exception as e:
         st.warning(f"Verwachtingsdata ophalen mislukt: {e}")
@@ -918,12 +958,12 @@ def fetch_forecast_and_tides(lat, lon):
             "hourly": ["wave_height","ocean_current_velocity",
                        "ocean_current_direction","sea_level_height_msl"],
             "timezone": "auto"
-        }, timeout=25).json()
+        }, timeout=25)
         df_m = pd.DataFrame(r.get("hourly", {}))
     except Exception:
         pass
     if df_w.empty:
-        return pd.DataFrame()
+        raise RuntimeError("geen weerdata ontvangen")   # niet cachen
     df = df_w.copy()
     df["time"] = pd.to_datetime(df["time"])
     # FIX: alles via to_numeric + fillna zodat np.radians nooit None krijgt
@@ -948,8 +988,19 @@ def fetch_forecast_and_tides(lat, lon):
         df["tide_dm"] = 0.0
     return df
 
+
+def fetch_forecast_and_tides(lat, lon):
+    """Haalt data op; bij een fout een lege DataFrame (en dus niet gecachet)."""
+    import time as _t
+    if _t.time() < _WX_BREAKER["until"]:
+        return pd.DataFrame()
+    try:
+        return _fetch_forecast_and_tides_cached(lat, lon)
+    except Exception:
+        return pd.DataFrame()
+
 @st.cache_data
-def fetch_weather_grid(lat, lon):
+def _fetch_weather_grid_cached(lat, lon):
     """Haal uurlijkse wind + stroom op voor één gridpunt (7 dagen)."""
     df_w = pd.DataFrame()
     df_m = pd.DataFrame()
@@ -958,7 +1009,7 @@ def fetch_weather_grid(lat, lon):
             "latitude": lat, "longitude": lon, "forecast_days": 7,
             "hourly": ["wind_speed_10m", "wind_direction_10m"],
             "wind_speed_unit": "kn", "timezone": "UTC"
-        }, timeout=10).json()
+        }, timeout=10)
         df_w = pd.DataFrame(r.get("hourly", {}))
         if not df_w.empty:
             df_w["time"] = pd.to_datetime(df_w["time"])
@@ -969,7 +1020,7 @@ def fetch_weather_grid(lat, lon):
             "latitude": lat, "longitude": lon, "forecast_days": 7,
             "hourly": ["ocean_current_velocity", "ocean_current_direction"],
             "timezone": "UTC"
-        }, timeout=10).json()
+        }, timeout=10)
         df_m = pd.DataFrame(r.get("hourly", {}))
         if not df_m.empty:
             df_m["time"] = pd.to_datetime(df_m["time"])
@@ -977,7 +1028,7 @@ def fetch_weather_grid(lat, lon):
         pass
 
     if df_w.empty:
-        return pd.DataFrame()
+        raise RuntimeError("geen weerdata ontvangen")   # niet cachen
 
     df = df_w.copy()
     if not df_m.empty and "ocean_current_velocity" in df_m:
@@ -997,19 +1048,45 @@ def fetch_weather_grid(lat, lon):
     return df
 
 
-def get_weather_at(grid_cache, lat, lon, dt):
+def fetch_weather_grid(lat, lon):
+    """Haalt data op; bij een fout een lege DataFrame (en dus niet gecachet)."""
+    import time as _t
+    if _t.time() < _WX_BREAKER["until"]:
+        return pd.DataFrame()
+    try:
+        return _fetch_weather_grid_cached(lat, lon)
+    except Exception:
+        return pd.DataFrame()
+
+
+def _wx_key(lat, lon, cell=0.1):
+    """Afronden op een raster (standaard 0,1°): buurpunten delen dezelfde weerdata,
+    zodat er veel minder aanvragen naar de weerdienst nodig zijn."""
+    return (round(round(lat / cell) * cell, 3), round(round(lon / cell) * cell, 3))
+
+
+def get_weather_at(grid_cache, lat, lon, dt, cell=0.1, stats=None):
     """
     Geeft (wind_kt, wind_dir_deg, cur_v_ms, cur_dir_deg) voor (lat,lon) op tijdstip dt.
-    grid_cache: dict van (lat,lon) -> DataFrame; wordt ter plekke gevuld.
+    grid_cache: dict van raster-cel -> DataFrame; wordt ter plekke gevuld.
+    Ontbreekt de weerdata, dan wordt een neutrale aanname gebruikt (10 kt uit het noorden)
+    en dat wordt geteld in stats["missing"], zodat de pagina dit kan melden.
     """
-    key = (round(lat, 2), round(lon, 2))
+    key = _wx_key(lat, lon, cell)
     if key not in grid_cache:
         grid_cache[key] = fetch_weather_grid(key[0], key[1])
     df = grid_cache[key]
+    if stats is not None:
+        stats["total"] = stats.get("total", 0) + 1
     if df.empty:
+        if stats is not None:
+            stats["missing"] = stats.get("missing", 0) + 1
         spd, direction, *_ = get_atlas_current(lat, lon, dt)
         return 10.0, 0.0, spd, direction
-    diff = (df["time"] - pd.Timestamp(dt, tz="UTC" if dt.tzinfo else None)).abs()
+    ts = pd.Timestamp(dt, tz="UTC" if dt.tzinfo else None)
+    if stats is not None and ts > df["time"].max() + pd.Timedelta(hours=3):
+        stats["beyond"] = stats.get("beyond", 0) + 1      # voorbij de voorspelling: laatste uur als benadering
+    diff = (df["time"] - ts).abs()
     row  = df.loc[diff.idxmin()]
     return (float(row["wind_speed_10m"]), float(row["wind_direction_10m"]),
             float(row["cur_v"]),           float(row["cur_dir"]))
@@ -1044,23 +1121,54 @@ def vmg_boat_speed(twa_deg, wind_kt, boat_speed_kt):
     return boat_speed_kt * factor * wind_factor
 
 
-@st.cache_data(ttl=3600)
+# Representatieve significante golfhoogte (Hs, meter) per zeegebied; terugval als de weerdienst geen golven geeft
+WAVE_ATLAS = {
+    "waddenzee_west": 0.5,  "waddenzee_oost": 0.4,
+    "westerschelde": 0.3,   "oosterschelde": 0.4,
+    "ijmuiden": 0.6,        "noordzee_nl_kust": 0.8,
+    "noordzee_midden": 1.2, "north_sea_central": 1.2,
+    "skagerrak": 0.7,       "kattegat": 0.5,
+    "baltische_zee": 0.6,   "noorwegen_westkust": 1.5,
+    "engelse_kanaal_west": 1.0, "engelse_kanaal_oost": 0.8,
+    "dover_straat": 1.1,    "ierse_zee": 1.2,
+    "schotse_westkust": 1.5,"schotse_noordkust": 2.0,
+    "atlantisch_nno": 2.5,  "golf_stream": 2.0,
+    "labrador_stroom": 2.0, "atlantisch_tropisch": 1.5,
+    "atlantisch_equator": 1.2, "atlantisch_zo": 1.8,
+    "atlantisch_zw": 1.8,   "golf_mexico": 1.0,
+    "caraibisch": 1.2,      "middellandse_west": 0.8,
+    "middellandse_oost": 0.6, "adriatische_zee": 0.6,
+    "egeische_zee": 0.7,    "straat_gibraltar": 1.0,
+    "suez_kanaal": 0.3,     "rode_zee": 0.8,
+    "arabische_zee": 1.5,   "straat_malakka": 0.6,
+    "indische_oceaan_n": 1.8,"indische_oceaan_z": 2.5,
+    "agulhas_stroom": 2.5,  "kuroshio": 2.0,
+    "california_stroom": 1.5,"pacific_no_trade": 1.5,
+    "pacific_equator": 1.2, "pacific_zo": 1.8,
+    "grote_barrière": 1.0,  "arctisch": 1.5,
+    "antarctisch": 3.5,     "open_zee": 1.5,
+}
+
+
+@st.cache_data
+def _sea_path_cached(la, loa, lb, lob):
+    """SeaRoute-pad (afstand NM, [[lat, lon], ...]); gecachet omdat de route niet verandert."""
+    route = sr.searoute([loa, la], [lob, lb], units="naut")
+    return route.properties["length"], [[c[1], c[0]] for c in route.geometry["coordinates"]]
+
+
 def route_window_score(la, loa, lb, lob, dep_dt, boat_spd_kt,
                        min_wind=9, max_wind=17, max_gust=20, max_wave=1.5,
                        preferred_dirs=None):
     """
-    Proxy-score (0-100) voor een vertrekmoment op deze route.
-    Gebruikt de SeaRoute-waypoints als samplepunten en beoordeelt
-    per punt of de weersomstandigheden voldoen aan de zeilfilters.
-    Score = gewogen gemiddelde van individuele conditie-scores (0-1 per conditie)
-    zodat het resultaat vloeiend is in plaats van binair.
+    Score (0-100) voor een vertrekmoment op deze route, op basis van de zeilfilters.
+    Punten waarvoor geen weerdata beschikbaar is tellen NIET mee. Zijn er te weinig
+    punten met data, dan is de uitkomst None (onbekend) in plaats van een verzonnen cijfer.
     """
     try:
-        route   = sr.searoute([loa, la], [lob, lb], units="naut")
-        dist_nm = route.properties["length"]
-        coords  = [[c[1], c[0]] for c in route.geometry["coordinates"]]
+        dist_nm, coords = _sea_path_cached(la, loa, lb, lob)
     except Exception:
-        return 50.0   # onbekend → neutraal
+        return None
 
     travel_hrs = dist_nm / max(boat_spd_kt, 1.0)
     # Sample elke ~2 uur langs de route, minimaal 8, maximaal 24 punten
@@ -1078,50 +1186,25 @@ def route_window_score(la, loa, lb, lob, dep_dt, boat_spd_kt,
         frac    = i / max(len(sample_pts) - 1, 1)
         t_at_pt = dep_dt + timedelta(hours=frac * travel_hrs)
 
-        # Wind ophalen — fallback naar atlas-waarden
-        try:
-            w_kt, w_dir, _, _ = get_weather_at(grid_cache, slat, slon, t_at_pt)
-            if w_kt == 0 and w_dir == 0:
-                raise ValueError("zero data")
-        except Exception:
-            w_kt  = (min_wind + max_wind) / 2   # neutraal midden
-            w_dir = 180.0
+        st_w = {}
+        w_kt, w_dir, _, _ = get_weather_at(grid_cache, slat, slon, t_at_pt, stats=st_w)
+        if st_w.get("missing") or st_w.get("beyond"):
+            continue                          # geen weerdata of voorbij de voorspelling: overslaan
 
-        # Golfhoogte: probeer grid, anders atlas
-        wave = max_wave * 0.6   # default: 60% van max → geen extreme uitsluiting
-        try:
-            key  = (round(slat, 2), round(slon, 2))
-            df_g = grid_cache.get(key, pd.DataFrame())
-            if not df_g.empty and "wave_height" in df_g.columns:
-                diff = (df_g["time"] - pd.Timestamp(t_at_pt)).abs()
-                val  = float(df_g.loc[diff.idxmin(), "wave_height"])
-                if val > 0:
-                    wave = val
-            else:
-                wave = WAVE_ATLAS.get(get_atlas_region(slat, slon), max_wave * 0.7)
-        except Exception:
-            pass
+        # Golfhoogte: de weerraster-data bevat geen golven; gebruik het gebiedsgemiddelde
+        wave = WAVE_ATLAS.get(get_atlas_region(slat, slon), max_wave * 0.7)
 
         gust_est = w_kt * 1.28   # gemiddelde stootfactor open zee
 
         # Vloeiende score per conditie (0.0-1.0) in plaats van binair
-        # Wind te weinig
         if w_kt < min_wind:
             wind_score = max(0.0, w_kt / max(min_wind, 1))
-        # Wind ideaal
         elif w_kt <= max_wind:
             wind_score = 1.0
-        # Wind te hard — afnemend tot 0 bij 1.5× max_wind
         else:
             wind_score = max(0.0, 1.0 - (w_kt - max_wind) / max(max_wind * 0.5, 1))
-
-        # Stoot: 1.0 onder max, aflopend
         gust_score = max(0.0, 1.0 - max(0, gust_est - max_gust) / max(max_gust * 0.3, 1))
-
-        # Golf: 1.0 onder max, aflopend
         wave_score = max(0.0, 1.0 - max(0, wave - max_wave) / max(max_wave * 0.5, 1))
-
-        # Windrichting
         if preferred_dirs:
             card    = degrees_to_cardinal(w_dir, nl=True)
             card_en = degrees_to_cardinal(w_dir, nl=False)
@@ -1129,12 +1212,12 @@ def route_window_score(la, loa, lb, lob, dep_dt, boat_spd_kt,
         else:
             dir_score = 1.0
 
-        # Gecombineerde score: geometrisch gemiddelde (streng maar niet binair)
-        combined = (wind_score * gust_score * wave_score * dir_score) ** 0.5
-        score_sum += combined
+        score_sum += (wind_score * gust_score * wave_score * dir_score) ** 0.5
         total     += 1
 
-    return round((score_sum / total) * 100, 1) if total > 0 else 50.0
+    if total < max(3, 0.5 * len(sample_pts)):
+        return None                                    # te weinig weerdata voor een betrouwbaar cijfer
+    return round((score_sum / total) * 100, 1)
 
 
 @st.cache_data
@@ -1165,6 +1248,17 @@ def build_searoute_corridor(la, loa, lb, lob, via=None, width_nm=35.0):
     cells_per_nm = 1.0 / (GRID * 60)   # cellen per NM (ruw)
     radius_cells = int(_m.ceil(width_nm * cells_per_nm)) + 1
 
+    # SeaRoute geeft op open zee knooppunten tot ruim 100 NM uit elkaar. Zonder tussenpunten
+    # ontstaan er gaten in de corridor en kan de router daar niet door (route stopt halverwege).
+    dense = []
+    for a_pt, b_pt in zip(route_pts[:-1], route_pts[1:]):
+        n_seg = max(1, int(haversine(a_pt[0], a_pt[1], b_pt[0], b_pt[1]) // 10))
+        for k in range(n_seg):
+            f = k / n_seg
+            dense.append([a_pt[0] + f * (b_pt[0] - a_pt[0]), a_pt[1] + f * (b_pt[1] - a_pt[1])])
+    dense.append(route_pts[-1])
+    route_pts = dense
+
     for rlat, rlon in route_pts:
         lat_c = round(rlat / GRID) * GRID
         lon_c = round(rlon / GRID) * GRID
@@ -1188,7 +1282,8 @@ def point_in_corridor(lat, lon, corridor, grid=0.25):
 
 def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
                      max_days=7, dt_hours=1.0, beam_width=60,
-                     directions=24, corridor=None, progress_cb=None):
+                     directions=24, corridor=None, progress_cb=None,
+                     weather_cell=0.1, stats=None):
     """
     Hybride isochrone-router (Optie A):
     - SeaRoute-corridor definieert het bevaarbare gebied
@@ -1225,7 +1320,8 @@ def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
                 arrived_path = waypoints + [final_wp]
                 break
 
-            w_kt, w_dir, cur_v, cur_dir = get_weather_at(grid_cache, lat, lon, t_now)
+            w_kt, w_dir, cur_v, cur_dir = get_weather_at(grid_cache, lat, lon, t_now,
+                                                         cell=weather_cell, stats=stats)
 
             for d_idx in range(DIRECTIONS):
                 hdg = d_idx * (360 / DIRECTIONS)
@@ -1256,6 +1352,8 @@ def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
                                  waypoints + [new_wp]))
 
         if arrived_path is not None:
+            if stats is not None:
+                stats["arrived"] = True
             return arrived_path
 
         if not new_beam:
@@ -1274,6 +1372,8 @@ def isochrone_router(la, loa, lb, lob, dep_dt, boat_spd_kt,
         beam = deduped
 
     # Max steps bereikt — geef het beste (dichtstbijzijnde) pad terug
+    if stats is not None:
+        stats["arrived"] = False
     if beam:
         return beam[0][4]
     return []
@@ -2381,6 +2481,7 @@ favourable heading *within* that corridor based on wind and current.
 
         # ── Stap 2: weeroptimale routing binnen de corridor ──────────────────
         with st.spinner(""):
+            wx_stats = {}
             # Adaptieve tijdstap: korte routes nauwkeuriger, lange routes sneller
             _ref_dist = haversine(la3, loa3, lb3, lob3)   # vogelvlucht als proxy
             if _ref_dist < 80:
@@ -2399,11 +2500,28 @@ favourable heading *within* that corridor based on wind and current.
                 directions=p3.get("directions", 24),
                 corridor=corridor or None,
                 progress_cb=_progress,
+                weather_cell=(0.1 if _ref_dist < 400 else 0.25),
+                stats=wx_stats,
             )
 
         prog_bar.progress(100, text="✅ Klaar!" if is_nl else "✅ Done!")
         prog_text.empty()
         st.session_state["3b_running"] = False
+
+        # Begin- en eindpunt van de router hebben nulwaarden; neem de waarden van het buurpunt over
+        if iso_path and len(iso_path) >= 3:
+            iso_path = list(iso_path)
+            _a, _b = iso_path[0], iso_path[1]
+            iso_path[0] = (_a[0], _a[1], _a[2], _b[3], _b[4], _b[5])
+            _y, _z = iso_path[-1], iso_path[-2]
+            if float(_y[3]) == 0.0 and float(_y[5]) == 0.0:
+                iso_path[-1] = (_y[0], _y[1], _y[2], _z[3], _z[4], _z[5])
+
+        # ── Bestemming niet bereikt binnen de voorspelling? Vul aan met de kortste route ──
+        dist_fc_3b = sum(haversine(iso_path[i][0], iso_path[i][1], iso_path[i + 1][0], iso_path[i + 1][1])
+                         for i in range(len(iso_path) - 1)) if iso_path and len(iso_path) > 1 else 0.0
+        if iso_path and len(iso_path) >= 2 and haversine(iso_path[-1][0], iso_path[-1][1], lb3, lob3) > 6.0:
+            iso_path = append_searoute_remainder(iso_path, _corridor_raw, (lb3, lob3), bspd3)
 
         # ── TSS-controle op de uiteindelijke weergestuurde route ────────────
         tss_info_3b = None
@@ -2424,60 +2542,72 @@ favourable heading *within* that corridor based on wind and current.
                 "No route found within 7 days. Try lower accuracy or a shorter distance."
             ); st.stop()
 
-        # ── Samenvatting ─────────────────────────────────────────────────────
-        total_hrs_3b = float(len(iso_path))
+        # ── Samenvatting (tijd en afstand uit de echte tijdstempels en punten) ──
+        has_remainder = any(pd.isna(w[3]) for w in iso_path)
+        total_hrs_3b = max(0.0, (iso_path[-1][2] - dep_dt3).total_seconds() / 3600.0)
         total_h_3b   = int(total_hrs_3b)
         total_m_3b   = int((total_hrs_3b - total_h_3b) * 60)
-        arr_dt_3b    = dep_dt3 + timedelta(hours=total_hrs_3b)
+        arr_dt_3b    = iso_path[-1][2]
 
         night_h = set(range(22, 24)) | set(range(0, 6))
         has_night_3b = any(
             (dep_dt3 + timedelta(hours=h)).hour in night_h
             for h in range(int(total_hrs_3b) + 2)
         )
-        # Werkelijk gevaren afstand (som van haversine-segmenten)
-        dist_3b_sailed = sum(
-            haversine(iso_path[i][0], iso_path[i][1],
-                      iso_path[i+1][0], iso_path[i+1][1])
-            for i in range(len(iso_path) - 1)
-        )
-
-        # SeaRoute-referentieafstand (kortste bevaarbare route) als vloer
+        dist_3b = sum(haversine(iso_path[i][0], iso_path[i][1], iso_path[i + 1][0], iso_path[i + 1][1])
+                      for i in range(len(iso_path) - 1))
+        dist_rem_3b = max(0.0, dist_3b - dist_fc_3b) if has_remainder else 0.0
         try:
-            ref_route = sr.searoute([loa3, la3], [lob3, lb3], units="naut")
-            dist_3b_ref = ref_route.properties["length"]
+            dist_3b_ref = _sea_path_cached(la3, loa3, lb3, lob3)[0]
         except Exception:
-            dist_3b_ref = dist_3b_sailed
+            dist_3b_ref = dist_3b
+        delta_ref = dist_3b - dist_3b_ref
 
-        # De weergestuurde route kan nooit KORTER zijn dan SeaRoute:
-        # als dat toch zo berekend wordt, is het een artefact van de corridor-
-        # resolutie. We rapporteren dan de SeaRoute-afstand als minimum.
-        dist_3b = max(dist_3b_sailed, dist_3b_ref)
+        # Was er weerdata? Zo niet, dan is dit geen echte weerroute en moet dat er duidelijk bij staan.
+        _tot, _mis = wx_stats.get("total", 0), wx_stats.get("missing", 0)
+        miss_share = (_mis / _tot) if _tot else 0.0
+        if miss_share > 0.05:
+            _msg = (f"Voor {miss_share:.0%} van de berekende punten kon geen weerdata worden opgehaald "
+                    f"(waarschijnlijk de aanvraaglimiet van de gratis weerdienst). Voor die punten is een neutrale "
+                    f"aanname gebruikt (10 kt uit het noorden), dus de route is niet betrouwbaar weergestuurd. "
+                    f"Probeer het over enkele minuten opnieuw of kies de nauwkeurigheid 'Snel'."
+                    if is_nl else
+                    f"No weather data could be retrieved for {miss_share:.0%} of the calculated points "
+                    f"(probably the request limit of the free weather service). A neutral assumption was used for "
+                    f"those points (10 kt from the north), so the route is not reliably weather-optimised. "
+                    f"Try again in a few minutes or choose the 'Fast' accuracy.")
+            (st.error if miss_share > 0.5 else st.warning)("⚠️ " + _msg)
 
-        if dist_3b_sailed < dist_3b_ref * 0.98:
-            st.info(
-                f"ℹ️ De berekende gevaren afstand ({dist_3b_sailed:.1f} NM) ligt lager dan de "
-                f"kortste SeaRoute-referentie ({dist_3b_ref:.1f} NM). Dit is een artefact van de "
-                f"corridorresolutie. De SeaRoute-afstand wordt als minimum gehanteerd."
+        _head = ("✅ Weeroptimale route berekend" if is_nl else "✅ Weather-optimal route calculated")
+        if has_remainder:
+            _head = ("✅ Route berekend — eerste deel weergestuurd" if is_nl
+                     else "✅ Route calculated — first part weather-optimised")
+        st.success(f"{_head} — **{dist_3b:.0f} NM** — **{total_h_3b}u {total_m_3b:02d}m**")
+        if has_remainder:
+            st.warning(
+                f"⏳ De bestemming ligt buiten de 7-daagse weersvoorspelling. De eerste {dist_fc_3b:.0f} NM zijn "
+                f"weergestuurd; de resterende ca. {dist_rem_3b:.0f} NM volgen de kortste route zonder weerdata "
+                f"(grijs gestippeld op de kaart, 'n/a' in de tabel). Reistijd en aankomst van dat laatste deel "
+                f"gaan uit van je bootsnelheid, zonder wind of stroom."
                 if is_nl else
-                f"ℹ️ The calculated sailed distance ({dist_3b_sailed:.1f} NM) is shorter than the "
-                f"shortest SeaRoute reference ({dist_3b_ref:.1f} NM). This is a corridor-resolution "
-                f"artefact. The SeaRoute distance is used as the minimum."
-            )
-
-        st.success(
-            f"{'✅ Weeroptimale route berekend' if is_nl else '✅ Weather-optimal route calculated'} — "
-            f"**{dist_3b:.1f} NM** — **{total_h_3b}u {total_m_3b:02d}m**"
-        )
+                f"⏳ The destination lies beyond the 7-day weather forecast. The first {dist_fc_3b:.0f} NM are "
+                f"weather-optimised; the remaining approx. {dist_rem_3b:.0f} NM follow the shortest route without "
+                f"weather data (grey dashed on the map, 'n/a' in the table). Travel time and arrival for that last "
+                f"part assume your boat speed, without wind or current.")
 
         mc1, mc2, mc3, mc4, mc5 = st.columns(5)
-        mc1.metric("Afstand (weerroute)"   if is_nl else "Distance (weather route)", f"{dist_3b:.1f} NM",
-                   delta=f"+{dist_3b - dist_3b_ref:.1f} NM vs SeaRoute" if dist_3b > dist_3b_ref else "= SeaRoute min.",
-                   delta_color="off")
+        mc1.metric("Afstand (weerroute)" if is_nl else "Distance (weather route)", f"{dist_3b:.1f} NM",
+                   delta=f"{delta_ref:+.0f} NM vs SeaRoute", delta_color="off")
         mc2.metric("Reistijd"         if is_nl else "Travel time",  f"{total_h_3b}u {total_m_3b:02d}m")
         mc3.metric("Bootsnelheid"     if is_nl else "Boat speed",   f"{bspd3:.1f} kt")
         mc4.metric("Vertrek"          if is_nl else "Departure",    dep_dt3.strftime("%d-%m %H:%M"))
         mc5.metric("Verwachte aankomst" if is_nl else "Est. arrival", arr_dt_3b.strftime("%d-%m %H:%M"))
+        if delta_ref < -0.02 * dist_3b_ref:
+            st.info("ℹ️ Deze route is korter dan de SeaRoute-referentie. De weerroute mag binnen de corridor "
+                    "snijden, maar er is geen landcontrole: controleer kustpassages zelf op land en ondiepten."
+                    if is_nl else
+                    "ℹ️ This route is shorter than the SeaRoute reference. The weather route may cut corners "
+                    "within the corridor, but there is no land check: verify coastal passages yourself.")
 
         if has_night_3b:
             st.warning(t["m3_night_warn"])
@@ -2508,141 +2638,150 @@ favourable heading *within* that corridor based on wind and current.
                 window_scores = list(_wex.map(_score_hour, range(1, 73)))
             window_scores.sort(key=lambda x: x[0])
 
-        # Beste venster in de komende 48 uur
-        best_offset, best_dt, best_score = max(window_scores, key=lambda x: x[2])
-        # Significant beter = minstens 15 procentpunten hoger
-        THRESHOLD = 15.0
+        window_scores = [w for w in window_scores if w[2] is not None]
+        _win_ok = (current_score is not None) and len(window_scores) >= 24
+        if not _win_ok:
+            st.info("ℹ️ Geen betrouwbare weervenster-analyse mogelijk: voor te veel punten langs de route ontbrak "
+                    "weerdata of liggen ze buiten de voorspelling."
+                    if is_nl else
+                    "ℹ️ No reliable weather-window analysis possible: weather data was missing for too many points "
+                    "along the route or they lie beyond the forecast.")
+        if _win_ok:
+            # Beste venster in de komende 48 uur
+            best_offset, best_dt, best_score = max(window_scores, key=lambda x: x[2])
+            # Significant beter = minstens 15 procentpunten hoger
+            THRESHOLD = 15.0
 
-        st.markdown("---")
-        st.markdown("### 🕐 " + ("Beste weervenster binnen 72 uur"
-                                  if is_nl else "Best weather window within 72 hours"))
+            st.markdown("---")
+            st.markdown("### 🕐 " + ("Beste weervenster binnen 72 uur"
+                                      if is_nl else "Best weather window within 72 hours"))
 
-        col_now, col_best = st.columns(2)
-        col_now.metric(
-            "Huidig vertrekmoment" if is_nl else "Current departure",
-            dep_dt3.strftime("%d-%m %H:%M"),
-            f"{current_score:.0f}% {'gunstig' if is_nl else 'favourable'}"
-        )
-        col_best.metric(
-            "Beste venster" if is_nl else "Best window",
-            best_dt.strftime("%d-%m %H:%M"),
-            f"{best_score:.0f}% {'gunstig' if is_nl else 'favourable'}",
-            delta_color="normal"
-        )
+            col_now, col_best = st.columns(2)
+            col_now.metric(
+                "Huidig vertrekmoment" if is_nl else "Current departure",
+                dep_dt3.strftime("%d-%m %H:%M"),
+                f"{current_score:.0f}% {'gunstig' if is_nl else 'favourable'}"
+            )
+            col_best.metric(
+                "Beste venster" if is_nl else "Best window",
+                best_dt.strftime("%d-%m %H:%M"),
+                f"{best_score:.0f}% {'gunstig' if is_nl else 'favourable'}",
+                delta_color="normal"
+            )
 
-        # Bereken reistijd-verschil voor het beste weervenster
-        # Bij beter weer (meer zeilen, minder motor) is de gemiddelde SOG hoger
-        # Benadering: betere score → hogere gemiddelde bootsnelheid
-        score_ratio  = best_score / max(current_score, 1)
-        # VMG-verbetering: lineair geschaald, max 20% sneller bij perfecte condities
-        speed_factor = 1.0 + min(0.20, (score_ratio - 1.0) * 0.15)
-        best_travel_hrs   = total_hrs_3b / speed_factor
-        best_h, best_m_   = int(best_travel_hrs), int((best_travel_hrs % 1) * 60)
-        curr_h, curr_m_   = int(total_hrs_3b), int((total_hrs_3b % 1) * 60)
-        time_gain_hrs     = total_hrs_3b - best_travel_hrs
-        time_gain_min     = int(abs(time_gain_hrs) * 60)
-        time_gain_str     = f"{int(abs(time_gain_hrs))}u {time_gain_min % 60:02d}m"
+            # Bereken reistijd-verschil voor het beste weervenster
+            # Bij beter weer (meer zeilen, minder motor) is de gemiddelde SOG hoger
+            # Benadering: betere score → hogere gemiddelde bootsnelheid
+            score_ratio  = best_score / max(current_score, 1)
+            # VMG-verbetering: lineair geschaald, max 20% sneller bij perfecte condities
+            speed_factor = 1.0 + min(0.20, (score_ratio - 1.0) * 0.15)
+            best_travel_hrs   = total_hrs_3b / speed_factor
+            best_h, best_m_   = int(best_travel_hrs), int((best_travel_hrs % 1) * 60)
+            curr_h, curr_m_   = int(total_hrs_3b), int((total_hrs_3b % 1) * 60)
+            time_gain_hrs     = total_hrs_3b - best_travel_hrs
+            time_gain_min     = int(abs(time_gain_hrs) * 60)
+            time_gain_str     = f"{int(abs(time_gain_hrs))}u {time_gain_min % 60:02d}m"
 
-        if best_score >= current_score + THRESHOLD:
-            if is_nl:
-                st.warning(
-                    f"⚠️ Over **{best_offset} uur** ({best_dt.strftime('%d-%m om %H:%M')}) "
-                    f"zijn de weersomstandigheden op deze route significant beter: "
-                    f"**{best_score:.0f}%** gunstig vs. **{current_score:.0f}%** nu.\n\n"
-                    f"**Geschatte winst bij dit weervenster:**  \n"
-                    f"• Reistijd: ~**{best_h}u {best_m_:02d}m** (nu: {curr_h}u {curr_m_:02d}m) "
-                    f"→ **{time_gain_str} korter**  \n"
-                    f"• Aankomst: ~**{(best_dt + timedelta(hours=best_travel_hrs)).strftime('%d-%m %H:%M')}**  \n"
-                    f"Overweeg **{best_offset} uur later** te vertrekken."
+            if best_score >= current_score + THRESHOLD:
+                if is_nl:
+                    st.warning(
+                        f"⚠️ Over **{best_offset} uur** ({best_dt.strftime('%d-%m om %H:%M')}) "
+                        f"zijn de weersomstandigheden op deze route significant beter: "
+                        f"**{best_score:.0f}%** gunstig vs. **{current_score:.0f}%** nu.\n\n"
+                        f"**Geschatte winst bij dit weervenster:**  \n"
+                        f"• Reistijd: ~**{best_h}u {best_m_:02d}m** (nu: {curr_h}u {curr_m_:02d}m) "
+                        f"→ **{time_gain_str} korter**  \n"
+                        f"• Aankomst: ~**{(best_dt + timedelta(hours=best_travel_hrs)).strftime('%d-%m %H:%M')}**  \n"
+                        f"Overweeg **{best_offset} uur later** te vertrekken."
+                    )
+                else:
+                    st.warning(
+                        f"⚠️ In **{best_offset} hours** ({best_dt.strftime('%d-%m at %H:%M')}) "
+                        f"conditions on this route are significantly better: "
+                        f"**{best_score:.0f}%** favourable vs. **{current_score:.0f}%** now.\n\n"
+                        f"**Estimated gain with this weather window:**  \n"
+                        f"• Travel time: ~**{best_h}h {best_m_:02d}m** (now: {curr_h}h {curr_m_:02d}m) "
+                        f"→ **{time_gain_str} shorter**  \n"
+                        f"• Arrival: ~**{(best_dt + timedelta(hours=best_travel_hrs)).strftime('%d-%m %H:%M')}**  \n"
+                        f"Consider departing **{best_offset} hours later**."
+                    )
+            elif current_score >= 70:
+                st.success(
+                    f"✅ Het gekozen vertrekmoment is al een goed weervenster "
+                    f"(**{current_score:.0f}%** gunstig). Geen significant beter alternatief "
+                    f"binnen 72 uur gevonden. Verwachte reistijd: **{curr_h}u {curr_m_:02d}m**."
+                    if is_nl else
+                    f"✅ The chosen departure is already a good weather window "
+                    f"(**{current_score:.0f}%** favourable). No significantly better alternative "
+                    f"found within 72 hours. Estimated travel time: **{curr_h}h {curr_m_:02d}m**."
                 )
             else:
-                st.warning(
-                    f"⚠️ In **{best_offset} hours** ({best_dt.strftime('%d-%m at %H:%M')}) "
-                    f"conditions on this route are significantly better: "
-                    f"**{best_score:.0f}%** favourable vs. **{current_score:.0f}%** now.\n\n"
-                    f"**Estimated gain with this weather window:**  \n"
-                    f"• Travel time: ~**{best_h}h {best_m_:02d}m** (now: {curr_h}h {curr_m_:02d}m) "
-                    f"→ **{time_gain_str} shorter**  \n"
-                    f"• Arrival: ~**{(best_dt + timedelta(hours=best_travel_hrs)).strftime('%d-%m %H:%M')}**  \n"
-                    f"Consider departing **{best_offset} hours later**."
+                st.info(
+                    f"ℹ️ Het gekozen vertrekmoment scoort **{current_score:.0f}%** gunstig "
+                    f"(reistijd: **{curr_h}u {curr_m_:02d}m**). "
+                    f"Het beste alternatief binnen 72 uur scoort **{best_score:.0f}%** "
+                    f"(over {best_offset} uur, geschatte reistijd: ~{best_h}u {best_m_:02d}m). "
+                    f"Het verschil is niet groot genoeg om aanzienlijk later te vertrekken aan te raden."
+                    if is_nl else
+                    f"ℹ️ The chosen departure scores **{current_score:.0f}%** favourable "
+                    f"(travel time: **{curr_h}h {curr_m_:02d}m**). "
+                    f"The best alternative within 72 hours scores **{best_score:.0f}%** "
+                    f"(in {best_offset} hours, estimated travel time: ~{best_h}h {best_m_:02d}m). "
+                    f"The difference is not large enough to strongly recommend departing later."
                 )
-        elif current_score >= 70:
-            st.success(
-                f"✅ Het gekozen vertrekmoment is al een goed weervenster "
-                f"(**{current_score:.0f}%** gunstig). Geen significant beter alternatief "
-                f"binnen 72 uur gevonden. Verwachte reistijd: **{curr_h}u {curr_m_:02d}m**."
-                if is_nl else
-                f"✅ The chosen departure is already a good weather window "
-                f"(**{current_score:.0f}%** favourable). No significantly better alternative "
-                f"found within 72 hours. Estimated travel time: **{curr_h}h {curr_m_:02d}m**."
-            )
-        else:
-            st.info(
-                f"ℹ️ Het gekozen vertrekmoment scoort **{current_score:.0f}%** gunstig "
-                f"(reistijd: **{curr_h}u {curr_m_:02d}m**). "
-                f"Het beste alternatief binnen 72 uur scoort **{best_score:.0f}%** "
-                f"(over {best_offset} uur, geschatte reistijd: ~{best_h}u {best_m_:02d}m). "
-                f"Het verschil is niet groot genoeg om aanzienlijk later te vertrekken aan te raden."
-                if is_nl else
-                f"ℹ️ The chosen departure scores **{current_score:.0f}%** favourable "
-                f"(travel time: **{curr_h}h {curr_m_:02d}m**). "
-                f"The best alternative within 72 hours scores **{best_score:.0f}%** "
-                f"(in {best_offset} hours, estimated travel time: ~{best_h}h {best_m_:02d}m). "
-                f"The difference is not large enough to strongly recommend departing later."
-            )
 
-        # Grafiek: score per uur de komende 48 uur
-        import plotly.graph_objects as _go
-        fig_win = _go.Figure()
-        hours   = [0]           + [w[0] for w in window_scores]
-        scores  = [current_score] + [w[2] for w in window_scores]
-        labels  = [dep_dt3.strftime("%d-%m %H:%M")] + [w[1].strftime("%d-%m %H:%M") for w in window_scores]
+            # Grafiek: score per uur de komende 48 uur
+            import plotly.graph_objects as _go
+            fig_win = _go.Figure()
+            hours   = [0]           + [w[0] for w in window_scores]
+            scores  = [current_score] + [w[2] for w in window_scores]
+            labels  = [dep_dt3.strftime("%d-%m %H:%M")] + [w[1].strftime("%d-%m %H:%M") for w in window_scores]
 
-        fig_win.add_trace(_go.Scatter(
-            x=labels, y=scores,
-            mode="lines+markers",
-            line=dict(color="#2ca02c", width=2),
-            marker=dict(size=5),
-            name="% gunstig" if is_nl else "% favourable",
-            hovertemplate="%{x}<br>%{y:.0f}%<extra></extra>"
-        ))
-        # Markeer huidig en beste venster
-        fig_win.add_trace(_go.Scatter(
-            x=[dep_dt3.strftime("%d-%m %H:%M")],
-            y=[current_score],
-            mode="markers",
-            marker=dict(size=12, color="royalblue", symbol="diamond"),
-            name="Gekozen vertrek" if is_nl else "Chosen departure"
-        ))
-        fig_win.add_trace(_go.Scatter(
-            x=[best_dt.strftime("%d-%m %H:%M")],
-            y=[best_score],
-            mode="markers",
-            marker=dict(size=12, color="gold", symbol="star"),
-            name="Beste venster" if is_nl else "Best window"
-        ))
-        fig_win.update_layout(
-            title="Weervenster-kwaliteit per uur (komende 72 uur)" if is_nl
-                  else "Weather window quality per hour (next 72 hours)",
-            xaxis_title="Vertrekmoment" if is_nl else "Departure time",
-            yaxis_title="% gunstig zeilweer" if is_nl else "% favourable sailing",
-            yaxis=dict(range=[0, 105]),
-            hovermode="x unified",
-            height=320,
-        )
-        # Groene zone markeren
-        fig_win.add_hrect(y0=70, y1=105,
-            fillcolor="rgba(44,160,44,0.08)", line_width=0,
-            annotation_text="Goed" if is_nl else "Good",
-            annotation_position="top left")
-        st.plotly_chart(fig_win, use_container_width=True)
-        st.caption(
-            "Berekend op basis van de huidige zeilfilters (windsnelheid, stoot, golf, richting). "
-            "Score = % van de route-segmenten dat aan alle filters voldoet op het moment van passeren."
-            if is_nl else
-            "Calculated based on current sailing filters (wind speed, gust, wave, direction). "
-            "Score = % of route segments meeting all filters at the time of passing."
-        )
+            fig_win.add_trace(_go.Scatter(
+                x=labels, y=scores,
+                mode="lines+markers",
+                line=dict(color="#2ca02c", width=2),
+                marker=dict(size=5),
+                name="% gunstig" if is_nl else "% favourable",
+                hovertemplate="%{x}<br>%{y:.0f}%<extra></extra>"
+            ))
+            # Markeer huidig en beste venster
+            fig_win.add_trace(_go.Scatter(
+                x=[dep_dt3.strftime("%d-%m %H:%M")],
+                y=[current_score],
+                mode="markers",
+                marker=dict(size=12, color="royalblue", symbol="diamond"),
+                name="Gekozen vertrek" if is_nl else "Chosen departure"
+            ))
+            fig_win.add_trace(_go.Scatter(
+                x=[best_dt.strftime("%d-%m %H:%M")],
+                y=[best_score],
+                mode="markers",
+                marker=dict(size=12, color="gold", symbol="star"),
+                name="Beste venster" if is_nl else "Best window"
+            ))
+            fig_win.update_layout(
+                title="Weervenster-kwaliteit per uur (komende 72 uur)" if is_nl
+                      else "Weather window quality per hour (next 72 hours)",
+                xaxis_title="Vertrekmoment" if is_nl else "Departure time",
+                yaxis_title="% gunstig zeilweer" if is_nl else "% favourable sailing",
+                yaxis=dict(range=[0, 105]),
+                hovermode="x unified",
+                height=320,
+            )
+            # Groene zone markeren
+            fig_win.add_hrect(y0=70, y1=105,
+                fillcolor="rgba(44,160,44,0.08)", line_width=0,
+                annotation_text="Goed" if is_nl else "Good",
+                annotation_position="top left")
+            st.plotly_chart(fig_win, use_container_width=True)
+            st.caption(
+                "Berekend op basis van de huidige zeilfilters (windsnelheid, stoot, golf, richting). "
+                "Score = % van de route-segmenten dat aan alle filters voldoet op het moment van passeren."
+                if is_nl else
+                "Calculated based on current sailing filters (wind speed, gust, wave, direction). "
+                "Score = % of route segments meeting all filters at the time of passing."
+            )
 
         # ── Kaart ─────────────────────────────────────────────────────────────
         import math as _mth
@@ -2679,6 +2818,16 @@ favourable heading *within* that corridor based on wind and current.
             sog     = float(wp[5]) if len(wp) > 5 else 0.0
             t_wp    = wp[2]
             t_str   = t_wp.strftime("%d-%m %H:%M") if hasattr(t_wp,"strftime") else str(t_wp)
+
+            if pd.isna(w_kt):                       # voorbij de voorspelling: kortste route, geen weerdata
+                folium.PolyLine(
+                    [path_coords[i], path_coords[i + 1]], color="#777777", weight=3, dash_array="6 6",
+                    tooltip=folium.Tooltip(
+                        f"WP {i+1} | {t_str}<br>" + ("Buiten de voorspelling: kortste route, geen weerdata"
+                                                    if is_nl else "Beyond the forecast: shortest route, no weather data"),
+                        sticky=True),
+                ).add_to(cmap3)
+                continue
 
             # Koers naar volgend punt
             hdg  = _hdg_calc(path_coords[i][0], path_coords[i][1],
@@ -2763,7 +2912,8 @@ favourable heading *within* that corridor based on wind and current.
           <span style="color:#7b0000;font-size:16px">&#9644;</span> &gt;28 kt &mdash; {h}<br>
           <hr style="margin:4px 0">
           &#9135;&#9135;&#9135; {sail} &nbsp;|&nbsp; - - - {motor}<br>
-          <span style="color:#1a6db5">➤</span> {wind_dir}
+          <span style="color:#1a6db5">➤</span> {wind_dir}<br>
+          <span style="color:#777">- - -</span> {nofc}
         </div>""".format(
             title    = "🌬️ Route-legenda" if is_nl else "🌬️ Route legend",
             l        = "licht wind"        if is_nl else "light wind",
@@ -2773,6 +2923,7 @@ favourable heading *within* that corridor based on wind and current.
             sail     = "zeilen"            if is_nl else "sailing",
             motor    = "motor"             if is_nl else "motor",
             wind_dir = "windrichting"      if is_nl else "wind direction",
+            nofc     = "buiten voorspelling" if is_nl else "beyond forecast",
         )
         cmap3.get_root().html.add_child(folium.Element(legend_html))
         components.html(cmap3._repr_html_(), height=600)
@@ -2838,9 +2989,11 @@ favourable heading *within* that corridor based on wind and current.
                 hdg = _bearing(float(iso_path[i-1][0]), float(iso_path[i-1][1]),
                                lat_w, lon_w)
 
+            no_fc = pd.isna(w_kt)                       # voorbij de voorspelling: geen weerdata
             # True Wind Angle = koers - windrichting
-            twa = (hdg - w_dir + 180) % 360 - 180
-            advies = _sail_advice(twa, w_kt, is_nl=is_nl)
+            twa = float("nan") if no_fc else (hdg - w_dir + 180) % 360 - 180
+            advies = (("⏳ Buiten voorspelling" if is_nl else "⏳ Beyond forecast") if no_fc
+                      else _sail_advice(twa, w_kt, is_nl=is_nl))
 
             rows.append({
                 "WP":                                               i + 1,
@@ -2850,13 +3003,17 @@ favourable heading *within* that corridor based on wind and current.
                 ("Tijd"         if is_nl else "Time"):              t_w.strftime("%d-%m %H:%M") if hasattr(t_w, "strftime") else str(t_w),
                 ("Koers (°)"    if is_nl else "Heading (°)"):       hdg,
                 ("Bootrichting" if is_nl else "Heading"):           degrees_to_cardinal(hdg, nl=is_nl),
-                ("Wind (kt)"    if is_nl else "Wind (kt)"):         round(w_kt, 1),
-                ("Windrichting" if is_nl else "Wind dir"):          degrees_to_cardinal(w_dir, nl=is_nl),
-                ("TWA (°)"      if is_nl else "TWA (°)"):           round(twa, 0),
+                ("Wind (kt)"    if is_nl else "Wind (kt)"):         ("n/a" if no_fc else round(w_kt, 1)),
+                ("Windrichting" if is_nl else "Wind dir"):          ("n/a" if no_fc else degrees_to_cardinal(w_dir, nl=is_nl)),
+                ("TWA (°)"      if is_nl else "TWA (°)"):           ("n/a" if no_fc else round(twa, 0)),
                 ("SOG (kt)"     if is_nl else "SOG (kt)"):          round(sog, 2),
                 ("Advies"       if is_nl else "Advice"):            advies,
             })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        df_wp_tbl = pd.DataFrame(rows)
+        for _c in df_wp_tbl.columns:                      # gemengde kolommen (cijfers + "n/a") als tekst
+            if df_wp_tbl[_c].map(type).nunique() > 1:
+                df_wp_tbl[_c] = df_wp_tbl[_c].astype(str)
+        st.dataframe(df_wp_tbl, use_container_width=True, hide_index=True)
 
         st.caption(
             "TWA = True Wind Angle (windhoek t.o.v. de boot). "
@@ -2962,32 +3119,7 @@ elif app_mode == t["m4"]:
 
     # Golfhoogte: als de Marine API geen golven heeft, gebruik atlasgebied-gemiddelden
     # (representatieve significante golfhoogte per zeegebied, Hs in meters)
-    WAVE_ATLAS = {
-        "waddenzee_west": 0.5,  "waddenzee_oost": 0.4,
-        "westerschelde": 0.3,   "oosterschelde": 0.4,
-        "ijmuiden": 0.6,        "noordzee_nl_kust": 0.8,
-        "noordzee_midden": 1.2, "north_sea_central": 1.2,
-        "skagerrak": 0.7,       "kattegat": 0.5,
-        "baltische_zee": 0.6,   "noorwegen_westkust": 1.5,
-        "engelse_kanaal_west": 1.0, "engelse_kanaal_oost": 0.8,
-        "dover_straat": 1.1,    "ierse_zee": 1.2,
-        "schotse_westkust": 1.5,"schotse_noordkust": 2.0,
-        "atlantisch_nno": 2.5,  "golf_stream": 2.0,
-        "labrador_stroom": 2.0, "atlantisch_tropisch": 1.5,
-        "atlantisch_equator": 1.2, "atlantisch_zo": 1.8,
-        "atlantisch_zw": 1.8,   "golf_mexico": 1.0,
-        "caraibisch": 1.2,      "middellandse_west": 0.8,
-        "middellandse_oost": 0.6, "adriatische_zee": 0.6,
-        "egeische_zee": 0.7,    "straat_gibraltar": 1.0,
-        "suez_kanaal": 0.3,     "rode_zee": 0.8,
-        "arabische_zee": 1.5,   "straat_malakka": 0.6,
-        "indische_oceaan_n": 1.8,"indische_oceaan_z": 2.5,
-        "agulhas_stroom": 2.5,  "kuroshio": 2.0,
-        "california_stroom": 1.5,"pacific_no_trade": 1.5,
-        "pacific_equator": 1.2, "pacific_zo": 1.8,
-        "grote_barrière": 1.0,  "arctisch": 1.5,
-        "antarctisch": 3.5,     "open_zee": 1.5,
-    }
+    # WAVE_ATLAS staat nu op moduleniveau (ook gebruikt door route_window_score)
     if not api_has_wave:
         region_wave = get_atlas_region(lat, lon)
         fallback_hs = WAVE_ATLAS.get(region_wave, 1.0)
