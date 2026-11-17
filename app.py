@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import pandas as pd
@@ -11,7 +10,7 @@ import searoute as sr
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-st.set_page_config(page_title="Sailplan", layout="wide")
+st.set_page_config(page_title="Zeilplan", layout="wide")
 
 st.markdown(
     """
@@ -28,7 +27,7 @@ with st.sidebar:
 is_nl = "Nederlands" in lang
 
 t = {
-    "title":    "⛵ Sailplan",
+    "title":    "⛵ Zeilplan",
     "subtitle": (
         "Geavanceerde tochtplanning met automatische maritieme water-routing, "
         "getijdenstroom (+/- Oost/West as), getijhoogte in decimeters (dm) en GPX-export."
@@ -1505,14 +1504,14 @@ if app_mode == t["m0"]:
     # ── Welkomspagina ─────────────────────────────────────────────────────────
     if is_nl:
         st.markdown("""
-### Welkom bij Sailplan
+### Welkom bij Zeilplan
 
 Deze app helpt je bij het plannen van een zeilreis — van een eerste indruk van het
 beste seizoen tot een volledig weergestuurde routeoptimalisatie.
 """)
     else:
         st.markdown("""
-### Welcome to Sailplan
+### Welcome to Zeilplan
 
 This app helps you plan a sailing passage — from a first impression of the best season
 to a fully weather-optimised route calculation.
@@ -2248,7 +2247,7 @@ The orange line shows the smooth open-water route. The blue dotted lines show th
 
         b1, b2 = st.columns(2)
         with b1:
-            gpx = ('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Sailplan">\n  <trk>\n    <n>'
+            gpx = ('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Zeilplan">\n  <trk>\n    <n>'
                    + na + ' to ' + nb + '</n>\n    <trkseg>\n'
                    + ''.join(f'      <trkpt lat="{lt}" lon="{ln}"></trkpt>\n' for lt,ln in pts)
                    + '    </trkseg>\n  </trk>\n</gpx>')
@@ -3027,7 +3026,7 @@ favourable heading *within* that corridor based on wind and current.
 
         # ── GPX export ────────────────────────────────────────────────────────
         gpx3_lines = ['<?xml version="1.0" encoding="UTF-8"?>',
-                      '<gpx version="1.1" creator="Sailplan">',
+                      '<gpx version="1.1" creator="Zeilplan">',
                       '  <trk>',
                       f'    <n>{na3} to {nb3} (weather-optimal)</n>',
                       '    <trkseg>']

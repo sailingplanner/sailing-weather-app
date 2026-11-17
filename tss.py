@@ -1,5 +1,5 @@
 """
-Sailplan - TSS-module (verkeersscheidingsstelsels, COLREG regel 10).
+Zeilplan - TSS-module (verkeersscheidingsstelsels, COLREG regel 10).
 
 Doel: een routelijn zo aanpassen dat een recreatievaartuig een TSS niet
 "in de lengte" bevaart maar loodrecht kruist (of er omheen blijft).
@@ -42,7 +42,7 @@ OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
 ]
-USER_AGENT = "Sailplan/1.0 (Streamlit passage planner)"
+USER_AGENT = "Zeilplan/1.0 (Streamlit passage planner)"
 
 
 # ----------------------------------------------------------------------------
